@@ -1,0 +1,9 @@
+#!/bin/bash
+set -e
+
+sed -i 's/val currentUserId = kotlinx.coroutines.runBlocking { (AppContainer.authRepository as com.example.data.repository.AuthRepositoryImpl).getUserId() }/val currentUserId = kotlinx.coroutines.runBlocking { (com.example.di.AppContainer.authRepository as com.example.data.repository.AuthRepositoryImpl).getUserId() }/g' app/src/main/java/com/example/ui/explore/ExploreScreen.kt
+sed -i 's/val currentUserId = kotlinx.coroutines.runBlocking { (AppContainer.authRepository as com.example.data.repository.AuthRepositoryImpl).getUserId() }/val currentUserId = kotlinx.coroutines.runBlocking { (com.example.di.AppContainer.authRepository as com.example.data.repository.AuthRepositoryImpl).getUserId() }/g' app/src/main/java/com/example/ui/favorites/FavoritesScreen.kt
+sed -i 's/val currentUserId = kotlinx.coroutines.runBlocking { (AppContainer.authRepository as com.example.data.repository.AuthRepositoryImpl).getUserId() }/val currentUserId = kotlinx.coroutines.runBlocking { (com.example.di.AppContainer.authRepository as com.example.data.repository.AuthRepositoryImpl).getUserId() }/g' app/src/main/java/com/example/ui/premium/PremiumScreen.kt
+sed -i 's/val currentUserId = kotlinx.coroutines.runBlocking { (AppContainer.authRepository as com.example.data.repository.AuthRepositoryImpl).getUserId() }/val currentUserId = kotlinx.coroutines.runBlocking { (com.example.di.AppContainer.authRepository as com.example.data.repository.AuthRepositoryImpl).getUserId() }/g' app/src/main/java/com/example/ui/wallpapers/WallpaperDetailScreen.kt
+sed -i 's/val currentUserId = kotlinx.coroutines.runBlocking { (AppContainer.authRepository as com.example.data.repository.AuthRepositoryImpl).getUserId() }/val currentUserId = kotlinx.coroutines.runBlocking { (com.example.di.AppContainer.authRepository as com.example.data.repository.AuthRepositoryImpl).getUserId() }/g' app/src/main/java/com/example/service/AdvancedWallpaperService.kt
+
