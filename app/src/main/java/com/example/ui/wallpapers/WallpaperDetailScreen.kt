@@ -315,10 +315,10 @@ fun WallpaperDetailScreen(
                 Icon(Icons.Default.MusicNote, contentDescription = "Audio", tint = MaterialTheme.colorScheme.primary)
             },
             title = {
-                Text("Live Wallpaper Sound", fontWeight = FontWeight.Bold)
+                Text("Live Wallpaper Audio", fontWeight = FontWeight.Bold)
             },
             text = {
-                Text("This live wallpaper includes sound. Would you like to enable audio when applied on your device? (Default is Muted)")
+                Text("This live wallpaper includes sound. Would you like to enable audio when active on your device?\n\nAudio is muted by default and will stay consistent across charging states.")
             },
             confirmButton = {
                 Button(
@@ -328,7 +328,7 @@ fun WallpaperDetailScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text("Enable Sound")
+                    Text("Sound ON")
                 }
             },
             dismissButton = {
@@ -338,7 +338,7 @@ fun WallpaperDetailScreen(
                         viewModel.onSoundPreferenceSelected(wp, soundOn = false)
                     }
                 ) {
-                    Text("Keep Muted (Default)")
+                    Text("Sound OFF (Default)")
                 }
             }
         )
@@ -351,6 +351,7 @@ fun WallpaperDetailScreen(
         return
     }
     val wp = wallpaper!!
+    var isChargingPreviewMode by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = Color.Black,
@@ -448,11 +449,62 @@ fun WallpaperDetailScreen(
                 )
             }
 
+            // Interactive charging preview overlay if user tests charging presentation
+            if (isChargingPreviewMode && wp.hasChargingAnimation) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.65f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(
+                                            Color(0xFFFFD700).copy(alpha = 0.35f),
+                                            Color.Transparent
+                                        )
+                                    ),
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("⚡", fontSize = 42.sp)
+                        }
+                        Text(
+                            text = "85%",
+                            fontSize = 48.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFD700),
+                            letterSpacing = (-1).sp
+                        )
+                        Text(
+                            text = "CHARGING TRANSITION PREVIEW",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.85f),
+                            letterSpacing = 2.sp
+                        )
+                        Text(
+                            text = "Displays on wallpaper surface when plugged in",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            }
+
             // Bottom Gradient Overlay
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(420.dp)
+                    .height(440.dp)
                     .align(Alignment.BottomCenter)
                     .background(
                         brush = Brush.verticalGradient(
@@ -470,7 +522,8 @@ fun WallpaperDetailScreen(
                 // Badges Row
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
                 ) {
                     val isLiveType = wp.type == "LIVE" || wp.type == "ADVANCED_LIVE"
                     if (isLiveType) {
@@ -506,29 +559,71 @@ fun WallpaperDetailScreen(
                             }
                         }
                     }
+                    if (wp.hasChargingAnimation) {
+                        Box(
+                            modifier = Modifier
+                                .background(Color(0xFFFFD700).copy(alpha = 0.2f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("⚡ CHARGING EFFECT", color = Color(0xFFFFD700), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                        }
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                // Charging Preview Toggle (if supported)
+                if (wp.hasChargingAnimation) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = !isChargingPreviewMode,
+                            onClick = { isChargingPreviewMode = false },
+                            label = { Text("Standard Mode") },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color.White.copy(alpha = 0.25f),
+                                selectedLabelColor = Color.White,
+                                containerColor = Color.Black.copy(alpha = 0.3f),
+                                labelColor = Color.White.copy(alpha = 0.7f)
+                            )
+                        )
+                        FilterChip(
+                            selected = isChargingPreviewMode,
+                            onClick = { isChargingPreviewMode = true },
+                            label = { Text("⚡ Test Charging Visual") },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFFFFD700).copy(alpha = 0.3f),
+                                selectedLabelColor = Color(0xFFFFD700),
+                                containerColor = Color.Black.copy(alpha = 0.3f),
+                                labelColor = Color.White.copy(alpha = 0.7f)
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
                     text = wp.title,
                     color = Color.White,
-                    fontSize = 32.sp,
+                    fontSize = 28.sp,
                     fontWeight = FontWeight.Medium,
                     letterSpacing = (-1).sp
                 )
 
                 if (!wp.description.isNullOrEmpty()) {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = wp.description,
                         color = Color.White.copy(alpha = 0.7f),
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
                     )
                 }
 
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 val isApplying = applyState is ApplyState.Applying
                 val progressText = (applyState as? ApplyState.Applying)?.message

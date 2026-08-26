@@ -108,7 +108,8 @@ object LocalWallpaperStorageManager {
         context: Context,
         wallpaperId: String,
         tempDownloadedFile: File,
-        soundAvailable: Boolean
+        soundAvailable: Boolean,
+        chargingAnimationAvailable: Boolean = false
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
             val dir = getWallpapersDirectory(context)
@@ -140,7 +141,8 @@ object LocalWallpaperStorageManager {
                 id = wallpaperId,
                 type = "LIVE",
                 localPath = targetFile.absolutePath,
-                soundAvailable = soundAvailable
+                soundAvailable = soundAvailable,
+                chargingAnimationAvailable = chargingAnimationAvailable
             )
 
             Result.success(targetFile)

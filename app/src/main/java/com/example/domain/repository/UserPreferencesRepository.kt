@@ -19,6 +19,7 @@ class UserPreferencesRepository(private val context: Context) {
         val APPLIED_WALLPAPER_TYPE = stringPreferencesKey("applied_wallpaper_type")
         val APPLIED_WALLPAPER_PATH = stringPreferencesKey("applied_wallpaper_path")
         val APPLIED_WALLPAPER_SOUND_AVAILABLE = booleanPreferencesKey("applied_wallpaper_sound_available")
+        val APPLIED_WALLPAPER_CHARGING_AVAILABLE = booleanPreferencesKey("applied_wallpaper_charging_available")
     }
 
     val isSoundEnabled: Flow<Boolean> = context.dataStore.data
@@ -51,6 +52,11 @@ class UserPreferencesRepository(private val context: Context) {
             preferences[APPLIED_WALLPAPER_SOUND_AVAILABLE] ?: false
         }
 
+    val appliedWallpaperChargingAvailable: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[APPLIED_WALLPAPER_CHARGING_AVAILABLE] ?: false
+        }
+
     suspend fun setSoundEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[SOUND_ENABLED] = enabled
@@ -67,13 +73,15 @@ class UserPreferencesRepository(private val context: Context) {
         id: String,
         type: String,
         localPath: String,
-        soundAvailable: Boolean
+        soundAvailable: Boolean,
+        chargingAnimationAvailable: Boolean = false
     ) {
         context.dataStore.edit { preferences ->
             preferences[APPLIED_WALLPAPER_ID] = id
             preferences[APPLIED_WALLPAPER_TYPE] = type
             preferences[APPLIED_WALLPAPER_PATH] = localPath
             preferences[APPLIED_WALLPAPER_SOUND_AVAILABLE] = soundAvailable
+            preferences[APPLIED_WALLPAPER_CHARGING_AVAILABLE] = chargingAnimationAvailable
         }
     }
 
@@ -95,5 +103,9 @@ class UserPreferencesRepository(private val context: Context) {
 
     suspend fun isAppliedWallpaperSoundAvailableSync(): Boolean {
         return context.dataStore.data.map { it[APPLIED_WALLPAPER_SOUND_AVAILABLE] ?: false }.firstOrNull() ?: false
+    }
+
+    suspend fun isAppliedWallpaperChargingAnimationAvailableSync(): Boolean {
+        return context.dataStore.data.map { it[APPLIED_WALLPAPER_CHARGING_AVAILABLE] ?: false }.firstOrNull() ?: false
     }
 }

@@ -102,9 +102,9 @@ class AdvancedWallpaperService : WallpaperService() {
         private fun observePreferences() {
             val prefs = AppContainer.getUserPreferencesRepository(applicationContext)
             serviceScope.launch {
-                prefs.isChargingAnimationEnabled.collect { enabled ->
-                    currentConfig = currentConfig?.copy(chargingAnimationEnabled = enabled)
-                        ?: AdvancedConfig(chargingAnimationEnabled = enabled)
+                prefs.appliedWallpaperChargingAvailable.collect { available ->
+                    currentConfig = currentConfig?.copy(chargingAnimationEnabled = available)
+                        ?: AdvancedConfig(chargingAnimationEnabled = available)
                     currentConfig?.let {
                         stateMachine = WallpaperStateMachine(it)
                     }
@@ -137,7 +137,7 @@ class AdvancedWallpaperService : WallpaperService() {
                 val prefs = AppContainer.getUserPreferencesRepository(applicationContext)
                 val soundUserPref = prefs.isSoundEnabledSync()
                 val soundAvailable = prefs.isAppliedWallpaperSoundAvailableSync()
-                val chargingAnimationPref = prefs.isChargingAnimationEnabledSync()
+                val chargingAnimationAvailable = prefs.isAppliedWallpaperChargingAnimationAvailableSync()
                 isSoundEnabled = soundUserPref && soundAvailable
                 player?.volume = if (isSoundEnabled) 1f else 0f
 
@@ -149,7 +149,7 @@ class AdvancedWallpaperService : WallpaperService() {
                         loopMainVideo = true,
                         stopWhenScreenOff = true,
                         restartOnScreenOn = false,
-                        chargingAnimationEnabled = chargingAnimationPref
+                        chargingAnimationEnabled = chargingAnimationAvailable
                     )
                     stateMachine = WallpaperStateMachine(currentConfig!!)
 
@@ -168,7 +168,7 @@ class AdvancedWallpaperService : WallpaperService() {
                             localVideoUri = Uri.parse(wallpaper.videoUrl)
                             val baseConfig = wallpaper.advancedConfig ?: AdvancedConfig()
                             currentConfig = baseConfig.copy(
-                                chargingAnimationEnabled = chargingAnimationPref
+                                chargingAnimationEnabled = chargingAnimationAvailable || wallpaper.hasChargingAnimation
                             )
                             stateMachine = WallpaperStateMachine(currentConfig!!)
 

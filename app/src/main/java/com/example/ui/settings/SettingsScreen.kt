@@ -6,8 +6,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,22 +14,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.di.AppContainer
-import com.example.di.ViewModelFactory
 import com.example.util.OemHelper
 
 @Composable
 fun SettingsScreen(navController: NavController) {
     val context = LocalContext.current
-    val viewModel: SettingsViewModel = viewModel(
-        factory = ViewModelFactory(
-            userPreferencesRepository = AppContainer.getUserPreferencesRepository(context)
-        )
-    )
-    val isSoundEnabled by viewModel.isSoundEnabled.collectAsState()
-    val isChargingAnimationEnabled by viewModel.isChargingAnimationEnabled.collectAsState()
 
     Column(
         modifier = Modifier
@@ -90,8 +78,8 @@ fun SettingsScreen(navController: NavController) {
         }
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Wallpaper Preferences & OEM Guidance Section
-        Text("WALLPAPER & PLAYBACK", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        // Wallpaper Playback & OEM Guidance Section
+        Text("WALLPAPER PLAYBACK & SYSTEM", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(8.dp))
         Column(
             modifier = Modifier
@@ -100,80 +88,6 @@ fun SettingsScreen(navController: NavController) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        Icons.Default.VolumeUp,
-                        contentDescription = "Sound",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Column {
-                        Text(
-                            "Live Wallpaper Sound",
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            "Enable audio for wallpapers supporting sound (default: off)",
-                            color = MaterialTheme.colorScheme.secondary,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-                Switch(
-                    checked = isSoundEnabled,
-                    onCheckedChange = { viewModel.toggleSound(it) }
-                )
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        Icons.Default.BatteryChargingFull,
-                        contentDescription = "Charging Animation",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Column {
-                        Text(
-                            "Charging Animation",
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            "Show subtle luxury charging visual when plugged in",
-                            color = MaterialTheme.colorScheme.secondary,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-                Switch(
-                    checked = isChargingAnimationEnabled,
-                    onCheckedChange = { viewModel.toggleChargingAnimation(it) }
-                )
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,

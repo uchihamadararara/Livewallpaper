@@ -188,7 +188,8 @@ class WallpaperDetailViewModel(
                 context = context,
                 wallpaperId = wallpaper.id,
                 tempDownloadedFile = tempFile,
-                soundAvailable = wallpaper.soundAvailable && soundEnabled
+                soundAvailable = wallpaper.soundAvailable && soundEnabled,
+                chargingAnimationAvailable = wallpaper.hasChargingAnimation
             )
             _applyState.value = ApplyState.Success("Live wallpaper applied! Choose Home or Home & Lock Screen in system preview.")
         }
