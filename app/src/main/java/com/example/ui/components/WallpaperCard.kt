@@ -34,11 +34,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.domain.models.Wallpaper
 import com.example.ui.theme.ChampagnePrimary
 
@@ -77,6 +79,14 @@ fun WallpaperCard(
         if (!cat.isNullOrBlank()) "$typeLabel • $cat" else if (!wallpaper.description.isNullOrBlank()) "$typeLabel • ${wallpaper.description}" else "$typeLabel • Dynamic"
     }
 
+    val context = LocalContext.current
+    val imageRequest = remember(wallpaper.thumbnailUrl, wallpaper.imageUrl) {
+        ImageRequest.Builder(context)
+            .data(wallpaper.thumbnailUrl.ifEmpty { wallpaper.imageUrl })
+            .crossfade(true)
+            .build()
+    }
+
     Box(
         modifier = modifier
             .clip(shape)
@@ -90,7 +100,7 @@ fun WallpaperCard(
     ) {
         // Wallpaper Image / Thumbnail
         AsyncImage(
-            model = wallpaper.thumbnailUrl.ifEmpty { wallpaper.imageUrl },
+            model = imageRequest,
             contentDescription = wallpaper.title,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

@@ -62,6 +62,7 @@ import coil.compose.AsyncImage
 import com.example.di.AppContainer
 import com.example.di.ViewModelFactory
 import com.example.domain.models.Wallpaper
+import com.example.ui.components.AppLogoIcon
 import com.example.ui.components.EmptyState
 import com.example.ui.components.ErrorState
 import com.example.ui.components.FilterBottomSheet
@@ -255,24 +256,7 @@ fun ExploreScreen(navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(Color(0xFF2563EB), Color(0xFF1D4ED8))
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "W",
-                            color = Color.White,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                    }
+                    AppLogoIcon(size = 44.dp)
                     Column {
                         Text(
                             text = "Explore Gallery",
@@ -558,7 +542,7 @@ fun ExploreScreen(navController: NavController) {
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                items(categoryList) { category ->
+                                items(categoryList, key = { it.name }) { category ->
                                     CategorySquareCard(
                                         category = category,
                                         isSelected = selectedCategoryFilter.equals(category.name, ignoreCase = true),
@@ -610,7 +594,7 @@ fun ExploreScreen(navController: NavController) {
                                 contentPadding = PaddingValues(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                items(popularTags) { tag ->
+                                items(popularTags, key = { it }) { tag ->
                                     TagPill(
                                         tag = tag,
                                         isSelected = selectedTagFilter.equals(tag, ignoreCase = true),
@@ -841,25 +825,8 @@ fun ExploreTopHeader(
                 )
             }
 
-            // Purple Gradient 'W' Icon Logo
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF8A2387), Color(0xFF6C38FF), Color(0xFF3897F0))
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "W",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black
-                )
-            }
+            // Circular App Logo Icon
+            AppLogoIcon(size = 32.dp)
 
             Text(
                 text = "Explore",

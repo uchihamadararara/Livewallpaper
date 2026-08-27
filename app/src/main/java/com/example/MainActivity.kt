@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -27,6 +29,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +45,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.ui.navigation.AppNavigation
 import com.example.ui.navigation.BottomNavItem
+import com.example.ui.splash.StartupLoadingScreen
 import com.example.ui.theme.ChampagnePrimary
 import com.example.ui.theme.MyApplicationTheme
 import com.google.android.gms.ads.MobileAds
@@ -51,7 +57,21 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-                MainScreen()
+                var isAppReady by remember { mutableStateOf(false) }
+
+                Crossfade(
+                    targetState = isAppReady,
+                    animationSpec = tween(durationMillis = 350),
+                    label = "AppStartupCrossfade"
+                ) { ready ->
+                    if (ready) {
+                        MainScreen()
+                    } else {
+                        StartupLoadingScreen(
+                            onLoadingComplete = { isAppReady = true }
+                        )
+                    }
+                }
             }
         }
     }

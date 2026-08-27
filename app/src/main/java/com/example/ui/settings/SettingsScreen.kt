@@ -26,6 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.di.AppContainer
 import com.example.di.ViewModelFactory
+import com.example.ui.components.AppLogoIcon
 import com.example.ui.theme.ChampagnePrimary
 import com.example.util.OemHelper
 import kotlinx.coroutines.launch
@@ -81,17 +82,7 @@ fun SettingsScreen(navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(listOf(Color(0xFF2563EB), Color(0xFF1D4ED8)))
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("W", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    }
+                    AppLogoIcon(size = 42.dp)
                     Column {
                         Text(
                             text = "Live Wallpaper",

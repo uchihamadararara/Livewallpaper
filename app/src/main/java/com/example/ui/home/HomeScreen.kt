@@ -37,6 +37,7 @@ import coil.compose.AsyncImage
 import com.example.di.AppContainer
 import com.example.di.ViewModelFactory
 import com.example.domain.models.Wallpaper
+import com.example.ui.components.AppLogoIcon
 import com.example.ui.components.EmptyState
 import com.example.ui.components.ErrorState
 import com.example.ui.components.FilterBottomSheet
@@ -102,24 +103,7 @@ fun HomeScreen(navController: NavController, authUserId: String?) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(Color(0xFF2563EB), Color(0xFF1D4ED8))
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "W",
-                            color = Color.White,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                    }
+                    AppLogoIcon(size = 44.dp)
                     Column {
                         Text(
                             text = "Live Wallpaper",
@@ -443,25 +427,8 @@ fun TopLiveWallpaperHeader(
                 )
             }
 
-            // Blue Gradient 'W' Icon Logo
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF2563EB), Color(0xFF1D4ED8))
-                        )
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "W",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black
-                )
-            }
+            // Circular App Logo Icon
+            AppLogoIcon(size = 32.dp)
 
             Text(
                 text = "Live Wallpaper",
