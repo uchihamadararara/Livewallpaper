@@ -81,7 +81,7 @@ fun StartupLoadingScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.ic_app_logo),
+                    painter = painterResource(id = R.drawable.img_app_logo),
                     contentDescription = "Startup Screen Artwork",
                     modifier = Modifier
                         .size(310.dp)

@@ -1,94 +1,124 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="512" height="512" viewBox="0 0 108 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <radialGradient id="bgGrad" cx="50%" cy="37%" r="48%">
-      <stop offset="0%" stop-color="#0D1B36" />
-      <stop offset="65%" stop-color="#050A17" />
-      <stop offset="100%" stop-color="#02040A" />
+    <radialGradient id="bg_space" cx="50%" cy="45%" r="52%">
+      <stop offset="0%" stop-color="#08142c" />
+      <stop offset="40%" stop-color="#030713" />
+      <stop offset="80%" stop-color="#010207" />
+      <stop offset="100%" stop-color="#000103" />
     </radialGradient>
-    <radialGradient id="sphereGrad" cx="50%" cy="47%" r="50%">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="35%" stop-color="#67E8F9" />
-      <stop offset="70%" stop-color="#0284C7" />
-      <stop offset="100%" stop-color="#0284C7" stop-opacity="0" />
+    
+    <radialGradient id="core_aura" cx="50%" cy="44%" r="42%">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.75" />
+      <stop offset="25%" stop-color="#0284c7" stop-opacity="0.5" />
+      <stop offset="60%" stop-color="#1e3a8a" stop-opacity="0.25" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0" />
     </radialGradient>
-    <linearGradient id="ringGrad" x1="24" y1="6" x2="84" y2="66" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#38BDF8" />
-      <stop offset="50%" stop-color="#00F0FF" />
-      <stop offset="100%" stop-color="#2563EB" />
+
+    <radialGradient id="hand_aura" cx="50%" cy="66%" r="28%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.6" />
+      <stop offset="50%" stop-color="#0369a1" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0" />
+    </radialGradient>
+
+    <linearGradient id="jacket_grad" x1="256" y1="270" x2="256" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="20%" stop-color="#0f172a" />
+      <stop offset="60%" stop-color="#070d1a" />
+      <stop offset="100%" stop-color="#02040a" />
     </linearGradient>
-    <linearGradient id="coatGrad" x1="54" y1="66" x2="54" y2="104" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#1E293B" />
-      <stop offset="40%" stop-color="#0F172A" />
+
+    <linearGradient id="hair_main" x1="256" y1="30" x2="256" y2="220" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="40%" stop-color="#f8fafc" />
+      <stop offset="75%" stop-color="#e0f2fe" />
+      <stop offset="90%" stop-color="#bae6fd" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+
+    <linearGradient id="blindfold_grad" x1="210" y1="190" x2="302" y2="226" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0b1120" />
+      <stop offset="45%" stop-color="#1e293b" />
+      <stop offset="80%" stop-color="#0f172a" />
       <stop offset="100%" stop-color="#020617" />
     </linearGradient>
-    <linearGradient id="hairGrad" x1="54" y1="14" x2="54" y2="42" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#FFFFFF" />
-      <stop offset="50%" stop-color="#E0F2FE" />
-      <stop offset="85%" stop-color="#93C5FD" />
-      <stop offset="100%" stop-color="#3B82F6" />
+
+    <linearGradient id="skin_grad" x1="256" y1="210" x2="256" y2="285" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#fff1f2" />
+      <stop offset="50%" stop-color="#f1f5f9" />
+      <stop offset="100%" stop-color="#cbd5e1" />
     </linearGradient>
-    <linearGradient id="blindfoldGrad" x1="44" y1="40" x2="64" y2="48" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#0F172A" />
-      <stop offset="50%" stop-color="#1E293B" />
-      <stop offset="100%" stop-color="#090D16" />
-    </linearGradient>
-    <linearGradient id="outerRingGrad" x1="0" y1="0" x2="108" y2="108" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#00F0FF" />
-      <stop offset="25%" stop-color="#38BDF8" />
-      <stop offset="50%" stop-color="#2563EB" />
-      <stop offset="75%" stop-color="#6366F1" />
-      <stop offset="100%" stop-color="#00F0FF" />
-    </linearGradient>
+
+    <filter id="glow_cyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
   </defs>
 
-  <!-- Circular Base -->
-  <circle cx="54" cy="54" r="50" fill="url(#bgGrad)" />
+  <!-- 1:1 Canvas Background -->
+  <rect width="512" height="512" fill="url(#bg_space)" />
 
-  <!-- Celestial Energy Sphere -->
-  <circle cx="54" cy="36" r="28" fill="url(#sphereGrad)" />
-  <circle cx="54" cy="36" r="30" stroke="url(#ringGrad)" stroke-width="1.2" stroke-opacity="0.7" fill="none" />
+  <!-- Dense Surging Radial Aura -->
+  <circle cx="256" cy="230" r="220" fill="url(#core_aura)" />
+  <circle cx="256" cy="350" r="160" fill="url(#hand_aura)" />
 
-  <!-- Shrine & Pagoda Silhouettes -->
-  <path d="M16,56 L28,56 L28,58 L25,58 L25,72 L23,72 L23,58 L21,58 L21,72 L19,72 L19,58 L16,58 Z" fill="#020B1E" fill-opacity="0.5" />
-  <path d="M80,52 L92,52 L90,56 L91,60 L89,64 L90,72 L82,72 L83,64 L81,60 L82,56 Z" fill="#020B1E" fill-opacity="0.5" />
+  <!-- High-Energy Lightning Bolts in Background -->
+  <path d="M110,180 L145,230 L130,260 L180,310" stroke="#00f0ff" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.8" />
+  <path d="M402,180 L367,230 L382,260 L332,310" stroke="#00f0ff" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.8" />
+  <path d="M80,320 L130,350 L110,390 L160,440" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.85" />
+  <path d="M432,320 L382,350 L402,390 L352,440" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.85" />
+  <path d="M190,90 L210,140 L195,160 L230,190" stroke="#67e8f9" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.7" />
+  <path d="M322,90 L302,140 L317,160 L282,190" stroke="#67e8f9" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.7" />
 
-  <!-- Dark High-Collar Sorcerer Outfit -->
-  <path d="M32,74 L42,66 L54,72 L66,66 L76,74 L86,104 L22,104 Z" fill="url(#coatGrad)" />
-  <path d="M34,70 C34,60 40,54 44,52 L54,58 L64,52 C68,54 74,60 74,70 L68,76 L54,72 L40,76 Z" fill="#090E17" stroke="#1E3A8A" stroke-width="0.8" />
+  <!-- High-Collar Sorcerer Outfit Body -->
+  <path d="M100,512 L140,360 L200,320 L256,345 L312,320 L372,360 L412,512 Z" fill="url(#jacket_grad)" />
+  
+  <!-- High Stiff Collar Structure -->
+  <path d="M165,335 C165,280 195,250 215,240 L256,268 L297,240 C317,250 347,280 347,335 L315,360 L256,345 L197,360 Z" fill="#080f1e" stroke="#1e3a8a" stroke-width="2.5" />
 
-  <!-- Face -->
-  <path d="M46,46 C46,54 50,59 54,62 C58,59 62,54 62,46 Z" fill="#E2E8F0" />
-  <path d="M52,56 Q54,57 56,56" stroke="#475569" stroke-width="0.8" fill="none" />
+  <!-- Face & Chin Structure -->
+  <path d="M220,215 C220,250 236,275 256,288 C276,275 292,250 292,215 Z" fill="url(#skin_grad)" />
+  
+  <!-- Smirk Mouth Line -->
+  <path d="M246,263 Q256,267 268,260" stroke="#1e293b" stroke-width="2.2" stroke-linecap="round" fill="none" />
+  <path d="M256,265 Q260,266 264,264" stroke="#475569" stroke-width="1.5" stroke-linecap="round" fill="none" />
 
-  <!-- Blindfold -->
-  <path d="M43,42 C45,40 63,40 65,42 L64,48 C62,50 46,50 44,48 Z" fill="url(#blindfoldGrad)" />
+  <!-- Blindfold Band -->
+  <path d="M205,192 C215,182 297,182 307,192 L302,225 C295,233 217,233 210,225 Z" fill="url(#blindfold_grad)" />
+  <path d="M206,208 C230,213 282,213 306,208" stroke="#334155" stroke-width="1.2" fill="none" />
 
-  <!-- Glowing Eyes Edge -->
-  <path d="M47,47 Q50,47.5 51,46.5" stroke="#00F0FF" stroke-width="1.2" fill="none" />
-  <path d="M57,46.5 Q58,47.5 61,47" stroke="#00F0FF" stroke-width="1.2" fill="none" />
+  <!-- Glowing Blue Eyes Peeking / Eye Reflection Edges -->
+  <path d="M224,218 Q238,220 242,216" stroke="#00f0ff" stroke-width="3" stroke-linecap="round" fill="none" filter="url(#glow_cyan)" />
+  <path d="M270,216 Q274,220 288,218" stroke="#00f0ff" stroke-width="3" stroke-linecap="round" fill="none" filter="url(#glow_cyan)" />
+  <circle cx="234" cy="217" r="2.5" fill="#ffffff" />
+  <circle cx="278" cy="217" r="2.5" fill="#ffffff" />
 
-  <!-- Spiky Luminous Hair -->
-  <path d="M38,42 C34,36 33,26 40,22 C42,26 44,25 46,18 C48,24 51,22 54,14 C57,22 60,24 62,18 C64,25 66,26 68,22 C75,26 74,36 70,42 C67,36 64,36 63,38 C60,34 56,34 54,36 C52,34 48,34 45,38 C44,36 41,36 38,42 Z" fill="url(#hairGrad)" />
-  <path d="M47,34 L49,42 L52,36 L54,43 L56,36 L59,42 L61,34" fill="#FFFFFF" />
+  <!-- Iconic Spiky Luminous White Hair -->
+  <path d="M176,192 C158,162 150,118 184,98 C194,118 202,112 212,80 C222,108 236,98 256,60 C276,98 290,108 300,80 C310,112 318,118 328,98 C362,118 354,162 336,192 C322,162 308,165 304,172 C290,154 272,154 256,162 C240,154 222,154 208,172 C204,165 190,162 176,192 Z" fill="url(#hair_main)" />
 
-  <!-- Mudra Hand Sign -->
-  <path d="M51,56 L53,49 L55,49 L55,56 L57,56 L58,68 L50,68 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="0.5" />
-  <path d="M48,64 C48,60 52,60 52,64 L52,78 L46,78 Z" fill="#E2E8F0" />
-  <path d="M56,64 C56,60 60,60 60,64 L60,78 L54,78 Z" fill="#E2E8F0" />
+  <!-- Hair Highlights & Detailed Sharp Tuft Strands -->
+  <path d="M218,150 L230,190 L242,160 L256,194 L270,160 L282,190 L294,150" fill="#ffffff" />
+  <path d="M188,115 L200,155 L212,130 L224,165 L240,120 L256,170 L272,120 L288,165 L300,130 L312,155 L324,115" fill="#f0f9ff" />
 
-  <!-- Lightning Aura Sparks -->
-  <path d="M26,38 L30,44 L28,48 L34,54" stroke="#00F0FF" stroke-width="1.2" stroke-linecap="round" fill="none" />
-  <path d="M82,38 L78,44 L80,48 L74,54" stroke="#00F0FF" stroke-width="1.2" stroke-linecap="round" fill="none" />
-  <path d="M36,78 L42,82 L38,88 L46,94" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round" fill="none" />
-  <path d="M72,78 L66,82 L70,88 L62,94" stroke="#38BDF8" stroke-width="1.4" stroke-linecap="round" fill="none" />
+  <!-- Raised Mudra Domain Sign (Two Fingers Cross Gesture in Foreground) -->
+  <path d="M242,258 L250,225 L259,225 L266,258 L272,315 L236,315 Z" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" />
+  <path d="M246,227 L253,190 L259,190 L257,227 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2" />
+  <path d="M256,227 L263,184 L269,184 L265,227 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.2" />
 
-  <!-- Floating Energy Particles -->
-  <path d="M22,28 C23,30 25,30 26,28 C25,26 23,26 22,28 Z" fill="#67E8F9" />
-  <path d="M86,28 C87,30 89,30 90,28 C89,26 87,26 86,28 Z" fill="#67E8F9" />
-  <path d="M18,68 C19,70 21,70 22,68 C21,66 19,66 18,68 Z" fill="#38BDF8" />
-  <path d="M90,68 C91,70 93,70 94,68 C93,66 91,66 90,68 Z" fill="#38BDF8" />
+  <!-- Hand Palm & Lower Arm Structure -->
+  <path d="M226,295 C226,275 246,275 246,295 L246,365 L218,365 Z" fill="#f1f5f9" />
+  <path d="M266,295 C266,275 286,275 286,295 L286,365 L258,365 Z" fill="#f1f5f9" />
+  <path d="M215,360 L297,360 L305,440 L207,440 Z" fill="#e2e8f0" />
+  <path d="M205,420 L307,420 L320,512 L192,512 Z" fill="#1e293b" stroke="#0284c7" stroke-width="1.5" />
 
-  <!-- Outer Neon Blue Rim -->
-  <circle cx="54" cy="54" r="49" stroke="url(#outerRingGrad)" stroke-width="1.5" stroke-opacity="0.65" fill="none" />
+  <!-- Floating Energy Spark Embers Around Character -->
+  <circle cx="120" cy="140" r="3.5" fill="#67e8f9" filter="url(#glow_cyan)" />
+  <circle cx="392" cy="140" r="3.5" fill="#67e8f9" filter="url(#glow_cyan)" />
+  <circle cx="95" cy="270" r="4" fill="#38bdf8" filter="url(#glow_cyan)" />
+  <circle cx="417" cy="270" r="4" fill="#38bdf8" filter="url(#glow_cyan)" />
+  <circle cx="140" cy="410" r="3" fill="#00f0ff" filter="url(#glow_cyan)" />
+  <circle cx="372" cy="410" r="3" fill="#00f0ff" filter="url(#glow_cyan)" />
+
+  <!-- High-Tech Electric Blue Outer Glow Ring (Centered for Circle Mask) -->
+  <circle cx="256" cy="256" r="250" stroke="#00f0ff" stroke-width="4" stroke-opacity="0.75" fill="none" />
+  <circle cx="256" cy="256" r="246" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.5" fill="none" />
 </svg>
