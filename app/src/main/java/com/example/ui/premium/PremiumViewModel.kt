@@ -42,8 +42,27 @@ class PremiumViewModel(
 
     fun subscribe(activity: Activity, productDetails: ProductDetails) {
         val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
-        if (offerToken != null) {
-            billingRepository.launchBillingFlow(activity, productDetails, offerToken)
-        }
+        billingRepository.launchBillingFlow(activity, productDetails, offerToken)
+    }
+
+    fun getProductForPlan(planIds: List<String>): ProductDetails? {
+        val products = subscriptionProducts.value ?: return null
+        return products.firstOrNull { it.productId in planIds }
+    }
+
+    fun getFormattedPriceForPlan(planIds: List<String>, fallback: String): String {
+        val product = getProductForPlan(planIds) ?: return fallback
+        val subPrice = product.subscriptionOfferDetails
+            ?.firstOrNull()
+            ?.pricingPhases
+            ?.pricingPhaseList
+            ?.firstOrNull()
+            ?.formattedPrice
+        if (!subPrice.isNullOrEmpty()) return subPrice
+
+        val oneTimePrice = product.oneTimePurchaseOfferDetails?.formattedPrice
+        if (!oneTimePrice.isNullOrEmpty()) return oneTimePrice
+
+        return fallback
     }
 }

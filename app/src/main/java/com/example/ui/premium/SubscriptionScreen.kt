@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,25 +24,29 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.data.billing.BillingManager
 import com.example.di.AppContainer
 import com.example.di.ViewModelFactory
-import com.example.ui.theme.ChampagnePrimary
 
-private data class VipPlanConfig(
+data class SubscriptionTier(
     val id: String,
     val aliasIds: List<String>,
     val title: String,
-    val defaultPrice: String,
+    val fallbackPrice: String,
     val subtitle: String,
     val badge: String? = null
 )
 
 @Composable
-fun PremiumScreen(navController: NavController) {
+fun SubscriptionScreen(
+    navController: NavController,
+    billingManager: BillingManager? = null
+) {
     val context = LocalContext.current
     val viewModel: PremiumViewModel = viewModel(
         factory = ViewModelFactory(
@@ -58,49 +61,50 @@ fun PremiumScreen(navController: NavController) {
     val userProfile by viewModel.userProfile.collectAsState()
     val isActive = userProfile?.subscriptionStatus == "ACTIVE"
 
-    val plans = remember {
+    // 5 requested tiers: 3 days, 7 days, 14 days, 1 month, and lifetime
+    val tiers = remember {
         listOf(
-            VipPlanConfig(
+            SubscriptionTier(
                 id = "vip_lifetime",
                 aliasIds = listOf("vip_lifetime", "premium_lifetime"),
                 title = "Lifetime VIP Pass",
-                defaultPrice = "$14.99",
+                fallbackPrice = "$14.99",
                 subtitle = "One-time purchase • Forever Access",
                 badge = "BEST VALUE"
             ),
-            VipPlanConfig(
+            SubscriptionTier(
                 id = "vip_1month",
                 aliasIds = listOf("vip_1month", "premium_monthly"),
                 title = "1 Month VIP Pass",
-                defaultPrice = "$4.99 / mo",
+                fallbackPrice = "$4.99 / mo",
                 subtitle = "Standard Monthly Pass • Cancel Anytime"
             ),
-            VipPlanConfig(
+            SubscriptionTier(
                 id = "vip_14days",
                 aliasIds = listOf("vip_14days", "premium_14_days"),
                 title = "14 Days VIP Pass",
-                defaultPrice = "$3.49",
+                fallbackPrice = "$3.49",
                 subtitle = "2 Weeks Unrestricted Access",
                 badge = "POPULAR"
             ),
-            VipPlanConfig(
+            SubscriptionTier(
                 id = "vip_7days",
                 aliasIds = listOf("vip_7days", "premium_7_days"),
                 title = "7 Days VIP Pass",
-                defaultPrice = "$1.99",
+                fallbackPrice = "$1.99",
                 subtitle = "Full Week Access • All VIP Wallpapers"
             ),
-            VipPlanConfig(
+            SubscriptionTier(
                 id = "vip_3days",
                 aliasIds = listOf("vip_3days", "premium_3_days"),
                 title = "3 Days VIP Pass",
-                defaultPrice = "$0.99",
+                fallbackPrice = "$0.99",
                 subtitle = "Quick 3-Day Pass • Ultra-HD & FX"
             )
         )
     }
 
-    var selectedPlanIndex by remember { mutableStateOf(0) } // Default Lifetime
+    var selectedTierIndex by remember { mutableStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -131,7 +135,7 @@ fun PremiumScreen(navController: NavController) {
             }
 
             Text(
-                text = "VIP STUDIO",
+                text = "VIP SUBSCRIPTION",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color(0xFF60A5FA),
@@ -140,7 +144,7 @@ fun PremiumScreen(navController: NavController) {
 
             TextButton(
                 onClick = {
-                    Toast.makeText(context, "Checking existing Google Play purchases...", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Checking Google Play purchases...", Toast.LENGTH_SHORT).show()
                 }
             ) {
                 Text("Restore", color = Color(0xFF38BDF8), fontSize = 13.sp, fontWeight = FontWeight.Bold)
@@ -154,9 +158,9 @@ fun PremiumScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // HERO CROWN BOX
+            // HERO BANNER
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -201,16 +205,16 @@ fun PremiumScreen(navController: NavController) {
                     )
 
                     Text(
-                        text = "Unlimited Ultra-HD video artworks, interactive charging engines, sound fx & zero interruptions.",
+                        text = "Unlimited Ultra-HD artworks, dynamic charging loops, audio FX & clean ad-free experience.",
                         color = Color.White.copy(alpha = 0.75f),
                         fontSize = 13.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        textAlign = TextAlign.Center,
                         lineHeight = 18.sp
                     )
                 }
             }
 
-            // PERKS LIST
+            // PERKS CONTAINER
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -221,11 +225,11 @@ fun PremiumScreen(navController: NavController) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 listOf(
-                    "Access to all exclusive wallpapers",
-                    "Dynamic Live Wallpapers with Audio FX",
-                    "Interactive Charging Animations Unlocked",
-                    "Ad-Free Pure High-Speed Experience",
-                    "New Artist Collections Added Weekly"
+                    "All exclusive live & 4K wallpapers unlocked",
+                    "Full dynamic charging loop transitions",
+                    "Studio audio FX on active wallpapers",
+                    "Ad-free pure high-speed experience",
+                    "Direct artist updates & fresh drops"
                 ).forEach { perk ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -255,9 +259,9 @@ fun PremiumScreen(navController: NavController) {
                 }
             }
 
-            // PLAN SELECTION CARDS
+            // TIERS LIST HEADER
             Text(
-                text = "CHOOSE YOUR VIP PASS",
+                text = "AVAILABLE SUBSCRIPTION TIERS",
                 color = Color(0xFF60A5FA),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
@@ -265,9 +269,17 @@ fun PremiumScreen(navController: NavController) {
                 modifier = Modifier.align(Alignment.Start)
             )
 
-            plans.forEachIndexed { index, plan ->
-                val isSelected = selectedPlanIndex == index
-                val dynamicPrice = viewModel.getFormattedPriceForPlan(plan.aliasIds, plan.defaultPrice)
+            // 5 SUBSCRIPTION TIERS CARDS
+            tiers.forEachIndexed { index, tier ->
+                val isSelected = selectedTierIndex == index
+                
+                // Fetch dynamic price from BillingManager/ViewModel with fallback
+                val dynamicPrice = if (billingManager != null) {
+                    val prod = billingManager.getProductDetailsForPlan(tier.aliasIds)
+                    billingManager.getFormattedPrice(prod) ?: tier.fallbackPrice
+                } else {
+                    viewModel.getFormattedPriceForPlan(tier.aliasIds, tier.fallbackPrice)
+                }
 
                 Box(
                     modifier = Modifier
@@ -285,7 +297,7 @@ fun PremiumScreen(navController: NavController) {
                             color = if (isSelected) Color(0xFF3B82F6) else Color(0xFF1E2A3C),
                             shape = RoundedCornerShape(16.dp)
                         )
-                        .clickable { selectedPlanIndex = index }
+                        .clickable { selectedTierIndex = index }
                         .padding(horizontal = 14.dp, vertical = 14.dp)
                 ) {
                     Row(
@@ -294,7 +306,7 @@ fun PremiumScreen(navController: NavController) {
                     ) {
                         RadioButton(
                             selected = isSelected,
-                            onClick = { selectedPlanIndex = index },
+                            onClick = { selectedTierIndex = index },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = Color(0xFF38BDF8),
                                 unselectedColor = Color(0xFF475569)
@@ -302,6 +314,7 @@ fun PremiumScreen(navController: NavController) {
                             modifier = Modifier.padding(end = 8.dp)
                         )
 
+                        // Title and subtitle with weight constraint ensuring stable width
                         Column(
                             modifier = Modifier
                                 .weight(1f)
@@ -312,21 +325,23 @@ fun PremiumScreen(navController: NavController) {
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    text = plan.title,
+                                    text = tier.title,
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp,
                                     maxLines = 1
                                 )
-                                if (plan.badge != null) {
+                                if (tier.badge != null) {
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(4.dp))
-                                            .background(if (plan.badge == "BEST VALUE") Color(0xFF2563EB) else Color(0xFF0284C7))
+                                            .background(
+                                                if (tier.badge == "BEST VALUE") Color(0xFF2563EB) else Color(0xFF0284C7)
+                                            )
                                             .padding(horizontal = 6.dp, vertical = 2.dp)
                                     ) {
                                         Text(
-                                            text = plan.badge,
+                                            text = tier.badge,
                                             color = Color.White,
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Black
@@ -336,28 +351,34 @@ fun PremiumScreen(navController: NavController) {
                             }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = plan.subtitle,
+                                text = tier.subtitle,
                                 color = Color.White.copy(alpha = 0.6f),
                                 fontSize = 12.sp,
                                 maxLines = 1
                             )
                         }
 
+                        // Formatted localized price - softWrap=false ensures consistent single-line alignment
                         Text(
                             text = dynamicPrice,
                             color = if (isSelected) Color(0xFF60A5FA) else Color.White,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 15.sp,
                             maxLines = 1,
-                            softWrap = false
+                            softWrap = false,
+                            textAlign = TextAlign.End
                         )
                     }
                 }
             }
 
-            // PRIMARY CTA ACTION BUTTON
-            val selectedPlan = plans.getOrElse(selectedPlanIndex) { plans.first() }
-            val selectedProduct = viewModel.getProductForPlan(selectedPlan.aliasIds)
+            // PRIMARY CTA BUTTON
+            val selectedTier = tiers.getOrElse(selectedTierIndex) { tiers.first() }
+            val selectedProduct = if (billingManager != null) {
+                billingManager.getProductDetailsForPlan(selectedTier.aliasIds)
+            } else {
+                viewModel.getProductForPlan(selectedTier.aliasIds)
+            }
 
             Button(
                 onClick = {
@@ -401,7 +422,7 @@ fun PremiumScreen(navController: NavController) {
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = if (isActive) "YOU ARE VIP" else "START ${selectedPlan.title.uppercase()}",
+                            text = if (isActive) "YOU ARE VIP" else "START ${selectedTier.title.uppercase()}",
                             color = Color.White,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Black,

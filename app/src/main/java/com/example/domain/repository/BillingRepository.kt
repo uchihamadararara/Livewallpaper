@@ -10,5 +10,5 @@ interface BillingRepository {
     val purchases: StateFlow<List<Purchase>>
     
     fun startBillingConnection()
-    fun launchBillingFlow(activity: Activity, productDetails: ProductDetails, offerToken: String)
+    fun launchBillingFlow(activity: Activity, productDetails: ProductDetails, offerToken: String?)
 }

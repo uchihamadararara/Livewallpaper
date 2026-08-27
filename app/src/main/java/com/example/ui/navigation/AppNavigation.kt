@@ -13,6 +13,7 @@ import com.example.ui.explore.ExploreScreen
 import com.example.ui.favorites.FavoritesScreen
 import com.example.ui.home.HomeScreen
 import com.example.ui.premium.PremiumScreen
+import com.example.ui.premium.SubscriptionScreen
 import com.example.ui.settings.SettingsScreen
 import com.example.ui.wallpapers.WallpaperDetailScreen
 import kotlinx.coroutines.runBlocking
@@ -61,6 +62,9 @@ fun AppNavigation(
         }
         composable("premium") {
             PremiumScreen(navController = navController)
+        }
+        composable("subscription") {
+            SubscriptionScreen(navController = navController)
         }
         composable(
             route = "detail/{wallpaperId}",
