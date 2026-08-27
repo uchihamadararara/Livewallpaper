@@ -2,6 +2,7 @@ package com.example.di
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.example.domain.repository.AuthRepository
 import com.example.domain.repository.BillingRepository
 import com.example.domain.repository.UserRepository
 import com.example.domain.repository.WallpaperRepository
@@ -14,6 +15,7 @@ import com.example.ui.settings.SettingsViewModel
 class ViewModelFactory(
     private val wallpaperRepository: WallpaperRepository? = null,
     private val userRepository: UserRepository? = null,
+    private val authRepository: AuthRepository? = null,
     private val authUserId: String? = null,
     private val extraId: String? = null,
     private val billingRepository: BillingRepository? = null,
@@ -30,7 +32,7 @@ class ViewModelFactory(
             return PremiumViewModel(billingRepository!!, userRepository!!, authUserId) as T
         }
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
-            return SettingsViewModel(userPreferencesRepository!!) as T
+            return SettingsViewModel(userRepository!!, authRepository!!, billingRepository!!, authUserId) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

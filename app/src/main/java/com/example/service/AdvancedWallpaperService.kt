@@ -1,30 +1,32 @@
 package com.example.service
 
+import android.app.KeyguardManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
+import android.os.BatteryManager
+import android.os.PowerManager
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.data.local.LocalWallpaperStorageManager
 import com.example.di.AppContainer
 import com.example.domain.models.AdvancedConfig
+import com.example.domain.models.LiveExperienceType
+import com.example.domain.models.LiveWallpaperManifest
 import com.example.domain.state.InputEvent
 import com.example.domain.state.WallpaperAction
 import com.example.domain.state.WallpaperStateMachine
-import com.example.service.charging.WallpaperChargingRenderer
-import com.example.util.getCurrentBatteryChargingState
-import com.example.util.parseBatteryIntent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -32,12 +34,14 @@ import java.io.File
  * The core Android WallpaperService engine.
  *
  * Architecture Highlights:
- * 1. Offline First: Loads applied video exclusively from persistent local storage.
- * 2. Reboot Resilient: Operates independently of Main Activity or network availability.
- * 3. Lifecycle & Battery Conscious: Automatically pauses playback and decoders when invisible or screen OFF.
- * 4. Audio Control: Muted by default; respects explicit user sound preferences.
- * 5. Luxury Charging Presentation: Seamlessly cross-fades into the obsidian/gold charging visual
- *    directly on the wallpaper surface when plugged in, with zero intrusive permissions.
+ * 1. Content-Driven Multi-State: Plays actual Admin-configured local video assets for each state
+ *    (primary, lock, transition, charging entry/loop, charging return).
+ * 2. Explicit Live Experience Type: Handles NORMAL vs TRANSITION modes accurately.
+ * 3. Offline First & Atomic Bundle: Loads exclusively from active bundle directory + manifest.json.
+ * 4. Reboot Resilient: Operates independently of Main Activity or network availability.
+ * 5. Default-Deny Audio Safety: Audio is strictly muted whenever legitimate wallpaper visibility
+ *    cannot be confirmed (screen off, obscured, keyguard changes).
+ * 6. Zero Generic Procedural Overlays: All visuals are 100% content-driven from video media assets.
  */
 class AdvancedWallpaperService : WallpaperService() {
 
@@ -49,32 +53,46 @@ class AdvancedWallpaperService : WallpaperService() {
         private var player: ExoPlayer? = null
         private var stateMachine: WallpaperStateMachine? = null
         private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
-        private val chargingRenderer = WallpaperChargingRenderer(applicationContext)
 
         private var currentConfig: AdvancedConfig? = null
-        private var localVideoUri: Uri? = null
+        private var activeManifest: LiveWallpaperManifest? = null
         private var isSoundEnabled = false
         private var currentHolder: SurfaceHolder? = null
+        private var currentPlayingState: String = ""
+
+        // Cached local file references from the active bundle
+        private var primaryVideoFile: File? = null
+        private var lockVideoFile: File? = null
+        private var transitionVideoFile: File? = null
+        private var chargingVideoFile: File? = null
+        private var chargingReturnVideoFile: File? = null
+
+        private val keyguardManager by lazy {
+            getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        }
+        private val powerManager by lazy {
+            getSystemService(Context.POWER_SERVICE) as? PowerManager
+        }
 
         private val screenReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 when (intent?.action) {
-                    Intent.ACTION_SCREEN_ON -> processEvent(InputEvent.ScreenOn)
-                    Intent.ACTION_SCREEN_OFF -> processEvent(InputEvent.ScreenOff)
-                    Intent.ACTION_USER_PRESENT -> processEvent(InputEvent.UserUnlocked)
+                    Intent.ACTION_SCREEN_ON -> {
+                        updateKeyguardState()
+                        processEvent(InputEvent.ScreenOn)
+                    }
+                    Intent.ACTION_SCREEN_OFF -> {
+                        processEvent(InputEvent.ScreenOff)
+                    }
+                    Intent.ACTION_USER_PRESENT -> {
+                        stateMachine?.setKeyguardLocked(false)
+                        processEvent(InputEvent.UserUnlocked)
+                    }
                     Intent.ACTION_POWER_CONNECTED -> {
-                        val batteryState = getCurrentBatteryChargingState(applicationContext)
-                        chargingRenderer.updateBatteryState(batteryState.copy(isCharging = true))
                         processEvent(InputEvent.PowerConnected)
                     }
                     Intent.ACTION_POWER_DISCONNECTED -> {
-                        val batteryState = getCurrentBatteryChargingState(applicationContext)
-                        chargingRenderer.updateBatteryState(batteryState.copy(isCharging = false))
                         processEvent(InputEvent.PowerDisconnected)
-                    }
-                    Intent.ACTION_BATTERY_CHANGED -> {
-                        val batteryState = parseBatteryIntent(intent)
-                        chargingRenderer.updateBatteryState(batteryState)
                     }
                 }
             }
@@ -90,35 +108,37 @@ class AdvancedWallpaperService : WallpaperService() {
                 addAction(Intent.ACTION_USER_PRESENT)
                 addAction(Intent.ACTION_POWER_CONNECTED)
                 addAction(Intent.ACTION_POWER_DISCONNECTED)
-                addAction(Intent.ACTION_BATTERY_CHANGED)
             }
             registerReceiver(screenReceiver, filter)
 
             initializePlayer()
-            loadActiveWallpaper()
+            loadActiveWallpaperBundle()
             observePreferences()
+        }
+
+        private fun updateKeyguardState() {
+            val isLocked = keyguardManager?.isKeyguardLocked ?: false
+            stateMachine?.setKeyguardLocked(isLocked)
+        }
+
+        private fun checkIsCharging(): Boolean {
+            val batteryIntent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+            return status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
         }
 
         private fun observePreferences() {
             val prefs = AppContainer.getUserPreferencesRepository(applicationContext)
             serviceScope.launch {
-                prefs.appliedWallpaperChargingAvailable.collect { available ->
-                    currentConfig = currentConfig?.copy(chargingAnimationEnabled = available)
-                        ?: AdvancedConfig(chargingAnimationEnabled = available)
-                    currentConfig?.let {
-                        stateMachine = WallpaperStateMachine(it)
-                    }
-                }
-            }
-            serviceScope.launch {
-                prefs.isSoundEnabled.collect { userPref ->
-                    val soundAvailable = prefs.isAppliedWallpaperSoundAvailableSync()
+                prefs.isAppliedWallpaperSoundEnabled.collect { userPref ->
+                    val soundAvailable = activeManifest?.soundAvailable ?: prefs.isAppliedWallpaperSoundAvailableSync()
                     isSoundEnabled = userPref && soundAvailable
-                    player?.volume = if (isSoundEnabled) 1f else 0f
+                    enforceAudioSafety()
                 }
             }
         }
 
+        @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
         private fun initializePlayer() {
             val renderersFactory = DefaultRenderersFactory(applicationContext)
                 .setEnableDecoderFallback(true)
@@ -126,57 +146,96 @@ class AdvancedWallpaperService : WallpaperService() {
             player = ExoPlayer.Builder(applicationContext, renderersFactory)
                 .build()
                 .apply {
-                    repeatMode = Player.REPEAT_MODE_ONE
-                    volume = 0f // Start muted by default
+                    volume = 0f // Start muted by default (Default-Deny Audio Safety)
                     playWhenReady = true
+                    addListener(object : Player.Listener {
+                        override fun onPlaybackStateChanged(playbackState: Int) {
+                            if (playbackState == Player.STATE_ENDED) {
+                                onMediaEnded()
+                            }
+                        }
+
+                        override fun onPlayerError(error: PlaybackException) {
+                            // Fallback to looping primary video on decoding error
+                            playAsset(primaryVideoFile, loop = true, stateKey = "primary_fallback")
+                        }
+                    })
                 }
         }
 
-        private fun loadActiveWallpaper() {
+        private fun onMediaEnded() {
+            when (currentPlayingState) {
+                "transition" -> {
+                    processEvent(InputEvent.TransitionFinished)
+                }
+                "charging_entry" -> {
+                    processEvent(InputEvent.ChargingEntryFinished)
+                }
+                "charging_return_home", "charging_return_lock" -> {
+                    processEvent(InputEvent.ChargingReturnFinished)
+                }
+            }
+        }
+
+        private fun loadActiveWallpaperBundle() {
             serviceScope.launch {
                 val prefs = AppContainer.getUserPreferencesRepository(applicationContext)
-                val soundUserPref = prefs.isSoundEnabledSync()
-                val soundAvailable = prefs.isAppliedWallpaperSoundAvailableSync()
-                val chargingAnimationAvailable = prefs.isAppliedWallpaperChargingAnimationAvailableSync()
-                isSoundEnabled = soundUserPref && soundAvailable
-                player?.volume = if (isSoundEnabled) 1f else 0f
+                val soundUserPref = prefs.isAppliedWallpaperSoundEnabledSync()
+                val manifest = LocalWallpaperStorageManager.getActiveManifest(applicationContext)
 
-                // Retrieve local persistent file
-                val localFile = LocalWallpaperStorageManager.getActiveLiveWallpaperFile(applicationContext)
-                if (localFile != null && localFile.exists() && localFile.length() > 0) {
-                    localVideoUri = Uri.fromFile(localFile)
+                if (manifest != null) {
+                    activeManifest = manifest
+                    isSoundEnabled = soundUserPref && manifest.soundAvailable
+
+                    primaryVideoFile = LocalWallpaperStorageManager.getActiveAssetFile(applicationContext, manifest.primaryVideoFile)
+                    lockVideoFile = LocalWallpaperStorageManager.getActiveAssetFile(applicationContext, manifest.lockVideoFile)
+                    transitionVideoFile = LocalWallpaperStorageManager.getActiveAssetFile(applicationContext, manifest.transitionVideoFile)
+                    chargingVideoFile = LocalWallpaperStorageManager.getActiveAssetFile(applicationContext, manifest.chargingVideoFile)
+                    chargingReturnVideoFile = LocalWallpaperStorageManager.getActiveAssetFile(applicationContext, manifest.chargingReturnVideoFile)
+
                     currentConfig = AdvancedConfig(
+                        liveExperienceType = manifest.liveExperienceType,
+                        lockAnimationEnabled = lockVideoFile != null,
+                        lockAnimationVideoUrl = manifest.lockVideoFile,
+                        lockDurationMs = manifest.lockDurationMs,
+                        unlockTransitionEnabled = transitionVideoFile != null,
+                        unlockTransitionVideoUrl = manifest.transitionVideoFile,
+                        transitionDurationMs = manifest.transitionDurationMs,
+                        chargingAnimationEnabled = chargingVideoFile != null,
+                        chargingAnimationVideoUrl = manifest.chargingVideoFile,
+                        chargingDurationMs = manifest.chargingDurationMs,
+                        chargingReturnAnimationVideoUrl = manifest.chargingReturnVideoFile,
+                        chargingReturnDurationMs = manifest.chargingReturnDurationMs,
+                        loopMainVideo = true,
+                        stopWhenScreenOff = true,
+                        restartOnScreenOn = true
+                    )
+                } else {
+                    // Fallback for single legacy file if manifest not yet written
+                    val legacyFile = LocalWallpaperStorageManager.getActiveLiveWallpaperFile(applicationContext)
+                    primaryVideoFile = legacyFile
+                    val soundAvailable = prefs.isAppliedWallpaperSoundAvailableSync()
+                    val chargingAvailable = prefs.isAppliedWallpaperChargingAnimationAvailableSync()
+                    isSoundEnabled = soundUserPref && soundAvailable
+
+                    currentConfig = AdvancedConfig(
+                        liveExperienceType = LiveExperienceType.NORMAL,
                         loopMainVideo = true,
                         stopWhenScreenOff = true,
                         restartOnScreenOn = false,
-                        chargingAnimationEnabled = chargingAnimationAvailable
+                        chargingAnimationEnabled = chargingAvailable
                     )
-                    stateMachine = WallpaperStateMachine(currentConfig!!)
+                }
 
-                    if (isVisible) {
-                        processEvent(InputEvent.ScreenOn)
-                    }
-                } else {
-                    // Fallback to room database if local file was not yet committed
-                    val activeId = prefs.getAppliedWallpaperIdSync()
-                    if (activeId != null) {
-                        val wallpaper = AppContainer.getWallpaperRepository(applicationContext)
-                            .getWallpaper(activeId)
-                            .firstOrNull()
+                stateMachine = WallpaperStateMachine(currentConfig!!)
+                updateKeyguardState()
 
-                        if (wallpaper != null && !wallpaper.videoUrl.isNullOrEmpty()) {
-                            localVideoUri = Uri.parse(wallpaper.videoUrl)
-                            val baseConfig = wallpaper.advancedConfig ?: AdvancedConfig()
-                            currentConfig = baseConfig.copy(
-                                chargingAnimationEnabled = chargingAnimationAvailable || wallpaper.hasChargingAnimation
-                            )
-                            stateMachine = WallpaperStateMachine(currentConfig!!)
+                if (checkIsCharging()) {
+                    processEvent(InputEvent.PowerConnected)
+                }
 
-                            if (isVisible) {
-                                processEvent(InputEvent.ScreenOn)
-                            }
-                        }
-                    }
+                if (isVisible) {
+                    processEvent(InputEvent.ScreenOn)
                 }
             }
         }
@@ -189,27 +248,34 @@ class AdvancedWallpaperService : WallpaperService() {
 
         override fun onSurfaceDestroyed(holder: SurfaceHolder) {
             super.onSurfaceDestroyed(holder)
-            chargingRenderer.stopImmediate()
             currentHolder = null
             player?.setVideoSurfaceHolder(null)
+            enforceAudioSafety()
         }
 
         override fun onVisibilityChanged(visible: Boolean) {
             super.onVisibilityChanged(visible)
             if (visible) {
+                updateKeyguardState()
                 if (stateMachine?.isScreenOn == false) {
                     processEvent(InputEvent.ScreenOn)
                 } else {
-                    val sm = stateMachine
-                    if (sm != null && sm.currentState is com.example.domain.state.ScreenState.Charging && sm.config.chargingAnimationEnabled) {
-                        currentHolder?.let { chargingRenderer.start(it) }
-                    } else {
-                        player?.play()
-                    }
+                    player?.play()
+                    enforceAudioSafety()
                 }
             } else {
-                chargingRenderer.stopImmediate()
+                enforceAudioSafety()
                 processEvent(InputEvent.ScreenOff)
+            }
+        }
+
+        private fun enforceAudioSafety() {
+            val p = player ?: return
+            val isScreenInteractive = powerManager?.isInteractive ?: true
+            if (isVisible && isScreenInteractive && isSoundEnabled) {
+                p.volume = 1f
+            } else {
+                p.volume = 0f
             }
         }
 
@@ -220,70 +286,85 @@ class AdvancedWallpaperService : WallpaperService() {
         }
 
         private fun executeAction(action: WallpaperAction) {
-            val p = player ?: return
-            val uri = localVideoUri ?: return
             val holder = currentHolder
 
             when (action) {
-                is WallpaperAction.PlayCharging -> {
-                    // Visual transition: smoothly fade in the luxury Canvas charging presentation over the surface
-                    // Audio behavior: strictly preserve the active Live Wallpaper sound preference (no forced mute)
-                    p.volume = if (isSoundEnabled) 1f else 0f
-                    if (holder != null && isVisible) {
-                        val batteryState = getCurrentBatteryChargingState(applicationContext)
-                        chargingRenderer.updateBatteryState(batteryState.copy(isCharging = true))
-                        chargingRenderer.start(holder)
+                is WallpaperAction.PlayLockScreen -> {
+                    val file = lockVideoFile ?: primaryVideoFile
+                    playAsset(file, loop = true, stateKey = "lock", seekToStart = action.startFromBeginning)
+                }
+                is WallpaperAction.PlayTransition -> {
+                    if (transitionVideoFile != null) {
+                        playAsset(transitionVideoFile, loop = false, stateKey = "transition", seekToStart = true)
+                    } else {
+                        playAsset(primaryVideoFile, loop = true, stateKey = "home")
                     }
                 }
                 is WallpaperAction.PlayHome -> {
-                    // Smoothly fade out charging visual back to the same live wallpaper
-                    chargingRenderer.stopWithFade()
-                    if (holder != null) {
-                        p.setVideoSurfaceHolder(holder)
-                    }
-                    if (p.currentMediaItem == null) {
-                        p.setMediaItem(MediaItem.fromUri(uri))
-                        p.repeatMode = Player.REPEAT_MODE_ONE
-                        p.volume = if (isSoundEnabled) 1f else 0f
-                        p.prepare()
+                    playAsset(primaryVideoFile, loop = true, stateKey = "home")
+                }
+                is WallpaperAction.PlayChargingEntry -> {
+                    if (chargingVideoFile != null) {
+                        playAsset(chargingVideoFile, loop = false, stateKey = "charging_entry", seekToStart = true)
                     } else {
-                        p.volume = if (isSoundEnabled) 1f else 0f
+                        playAsset(primaryVideoFile, loop = true, stateKey = "home")
                     }
-                    p.play()
                 }
-                is WallpaperAction.PlayLockScreen -> {
-                    chargingRenderer.stopWithFade()
-                    if (holder != null) {
-                        p.setVideoSurfaceHolder(holder)
+                is WallpaperAction.PlayChargingLoop -> {
+                    if (chargingVideoFile != null) {
+                        playAsset(chargingVideoFile, loop = true, stateKey = "charging_loop")
+                    } else {
+                        playAsset(primaryVideoFile, loop = true, stateKey = "home")
                     }
-                    if (p.currentMediaItem == null) {
-                        p.setMediaItem(MediaItem.fromUri(uri))
-                        p.repeatMode = Player.REPEAT_MODE_ONE
-                        p.volume = if (isSoundEnabled) 1f else 0f
-                        p.prepare()
-                    }
-                    if (action.startFromBeginning) {
-                        p.seekTo(0)
-                    }
-                    p.volume = if (isSoundEnabled) 1f else 0f
-                    p.play()
                 }
-                is WallpaperAction.PlayTransition -> {
-                    chargingRenderer.stopWithFade()
-                    if (holder != null) {
-                        p.setVideoSurfaceHolder(holder)
+                is WallpaperAction.PlayChargingReturnToLock -> {
+                    if (chargingReturnVideoFile != null) {
+                        playAsset(chargingReturnVideoFile, loop = false, stateKey = "charging_return_lock", seekToStart = true)
+                    } else {
+                        val file = lockVideoFile ?: primaryVideoFile
+                        playAsset(file, loop = true, stateKey = "lock")
                     }
-                    p.volume = if (isSoundEnabled) 1f else 0f
-                    p.play()
+                }
+                is WallpaperAction.PlayChargingReturnToHome -> {
+                    if (chargingReturnVideoFile != null) {
+                        playAsset(chargingReturnVideoFile, loop = false, stateKey = "charging_return_home", seekToStart = true)
+                    } else {
+                        playAsset(primaryVideoFile, loop = true, stateKey = "home")
+                    }
                 }
                 is WallpaperAction.Pause -> {
-                    chargingRenderer.stopImmediate()
-                    p.pause()
+                    enforceAudioSafety()
+                    player?.pause()
                 }
                 is WallpaperAction.Mute -> {
-                    p.volume = 0f
+                    player?.volume = 0f
                 }
             }
+        }
+
+        private fun playAsset(file: File?, loop: Boolean, stateKey: String, seekToStart: Boolean = false) {
+            val p = player ?: return
+            val targetFile = file ?: primaryVideoFile ?: return
+            if (!targetFile.exists()) return
+
+            currentPlayingState = stateKey
+
+            val currentUri = p.currentMediaItem?.localConfiguration?.uri
+            val targetUri = Uri.fromFile(targetFile)
+
+            if (currentUri != targetUri) {
+                p.setMediaItem(MediaItem.fromUri(targetUri))
+                p.repeatMode = if (loop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+                p.prepare()
+                p.play()
+            } else {
+                p.repeatMode = if (loop) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+                if (seekToStart) {
+                    p.seekTo(0)
+                }
+                p.play()
+            }
+            enforceAudioSafety()
         }
 
         override fun onDestroy() {
@@ -291,7 +372,6 @@ class AdvancedWallpaperService : WallpaperService() {
             try {
                 unregisterReceiver(screenReceiver)
             } catch (_: Exception) {}
-            chargingRenderer.release()
             player?.stop()
             player?.release()
             player = null
@@ -299,3 +379,4 @@ class AdvancedWallpaperService : WallpaperService() {
         }
     }
 }
+

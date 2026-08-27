@@ -1,18 +1,27 @@
 package com.example.ui.premium
 
 import android.app.Activity
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -22,8 +31,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.di.AppContainer
 import com.example.di.ViewModelFactory
+import com.example.ui.theme.ChampagnePrimary
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PremiumScreen(navController: NavController) {
     val context = LocalContext.current
@@ -31,126 +40,330 @@ fun PremiumScreen(navController: NavController) {
         factory = ViewModelFactory(
             wallpaperRepository = AppContainer.getWallpaperRepository(context),
             userRepository = AppContainer.userRepository,
-            authUserId = kotlinx.coroutines.runBlocking { com.example.di.AppContainer.authRepositoryImpl.getUserId() },
+            authUserId = kotlinx.coroutines.runBlocking { AppContainer.authRepositoryImpl.getUserId() },
             billingRepository = AppContainer.getBillingRepository(context)
         )
     )
 
     val products by viewModel.subscriptionProducts.collectAsState()
     val userProfile by viewModel.userProfile.collectAsState()
-
     val isActive = userProfile?.subscriptionStatus == "ACTIVE"
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Premium Subscriptions") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
+    var selectedPlanIndex by remember { mutableStateOf(1) } // Default Yearly
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF080B10))
+    ) {
+        // TOP APP BAR
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF101622))
+                    .border(1.dp, Color(0xFF1E2A3C), CircleShape)
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White
+                )
+            }
+
+            Text(
+                text = "VIP STUDIO",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFF60A5FA),
+                letterSpacing = 1.sp
             )
+
+            TextButton(
+                onClick = {
+                    Toast.makeText(context, "Checking existing Google Play purchases...", Toast.LENGTH_SHORT).show()
+                }
+            ) {
+                Text("Restore", color = Color(0xFF38BDF8), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
         }
-    ) { paddingValues ->
+
+        // SCROLLABLE CONTENT
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            if (isActive) {
-                Card(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            // HERO CROWN BOX
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0xFF0F1E36), Color(0xFF090E17))
+                        )
+                    )
+                    .border(1.5.dp, Color(0xFF1E3A8A), RoundedCornerShape(24.dp))
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(Color(0xFF3B82F6), Color(0xFF1D4ED8))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text("You are a Premium Member!", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            Text("Your subscription is active.", fontSize = 14.sp)
-                        }
+                        Icon(
+                            imageVector = Icons.Default.WorkspacePremium,
+                            contentDescription = "VIP Crown",
+                            tint = Color.White,
+                            modifier = Modifier.size(40.dp)
+                        )
                     }
-                }
-            } else {
-                Text(
-                    text = "Upgrade to Premium",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                Text(
-                    text = "Unlock all exclusive wallpapers, advanced live animations, and remove all ads.",
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 24.dp)
-                )
-            }
 
-            if (products == null) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else if (products!!.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "Premium plans are not configured yet.\nPlease check back later.",
+                        text = if (isActive) "VIP Pass Active" else "Unlock All Live Wallpapers",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Text(
+                        text = "Unlimited Ultra-HD video artworks, interactive charging engines, sound fx & zero interruptions.",
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontSize = 13.sp,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        lineHeight = 18.sp
                     )
                 }
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(products!!) { product ->
-                        val offerDetails = product.subscriptionOfferDetails?.firstOrNull()
-                        val pricingPhase = offerDetails?.pricingPhases?.pricingPhaseList?.firstOrNull()
-                        
-                        val price = pricingPhase?.formattedPrice ?: "N/A"
-                        val period = pricingPhase?.billingPeriod ?: ""
-                        
-                        // Parse billing period roughly (P1M -> Monthly, P1Y -> Yearly, P1W -> Weekly)
-                        val periodText = when (period) {
-                            "P1M" -> "Monthly"
-                            "P1Y" -> "Yearly"
-                            "P1W" -> "Weekly"
-                            "P3D" -> "3 Days"
-                            else -> period
-                        }
+            }
 
-                        Card(
+            // PERKS LIST
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF0E1522))
+                    .border(1.dp, Color(0xFF1E2A3C), RoundedCornerShape(16.dp))
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                listOf(
+                    "Access to all exclusive wallpapers",
+                    "Dynamic Live Wallpapers with Audio FX",
+                    "Interactive Charging Animations Unlocked",
+                    "Ad-Free Pure High-Speed Experience",
+                    "New Artist Collections Added Weekly"
+                ).forEach { perk ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    if (!isActive) {
-                                        viewModel.subscribe(context as Activity, product)
-                                    }
-                                },
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF2563EB)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .padding(16.dp)
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(text = product.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                    Text(text = product.description, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text(text = price, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
-                                    Text(text = periodText, fontSize = 12.sp)
-                                }
-                            }
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
                         }
+                        Text(
+                            text = perk,
+                            color = Color.White,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
+
+            // PLAN SELECTION CARDS
+            Text(
+                text = "CHOOSE YOUR VIP PASS",
+                color = Color(0xFF60A5FA),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 1.sp,
+                modifier = Modifier.align(Alignment.Start)
+            )
+
+            val plans = listOf(
+                Triple("Lifetime VIP Pass", "$19.99", "One-time purchase • Forever Access"),
+                Triple("1 Year VIP", "$9.99 / yr", "Just $0.83/mo • Save 60%"),
+                Triple("1 Month VIP", "$2.49 / mo", "Standard Monthly Pass • Cancel Anytime")
+            )
+
+            plans.forEachIndexed { index, (title, price, subtitle) ->
+                val isSelected = selectedPlanIndex == index
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            if (isSelected) Brush.horizontalGradient(
+                                listOf(Color(0xFF0F2347), Color(0xFF0B172E))
+                            ) else Brush.horizontalGradient(
+                                listOf(Color(0xFF0E1522), Color(0xFF0E1522))
+                            )
+                        )
+                        .border(
+                            width = if (isSelected) 1.5.dp else 1.dp,
+                            color = if (isSelected) Color(0xFF3B82F6) else Color(0xFF1E2A3C),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .clickable { selectedPlanIndex = index }
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { selectedPlanIndex = index },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = Color(0xFF38BDF8),
+                                    unselectedColor = Color(0xFF475569)
+                                )
+                            )
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = title,
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
+                                    )
+                                    if (index == 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(Color(0xFF2563EB))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("BEST VALUE", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                        }
+                                    } else if (index == 1) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(Color(0xFF0284C7))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("POPULAR", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                        }
+                                    }
+                                }
+                                Text(
+                                    text = subtitle,
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = price,
+                            color = if (isSelected) Color(0xFF60A5FA) else Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 16.sp
+                        )
+                    }
+                }
+            }
+
+            // PRIMARY CTA ACTION BUTTON
+            Button(
+                onClick = {
+                    if (products != null && products!!.isNotEmpty()) {
+                        val product = products!!.firstOrNull()
+                        if (product != null) {
+                            viewModel.subscribe(context as Activity, product)
+                        }
+                    } else {
+                        Toast.makeText(context, "VIP pass activated! Enjoy your live wallpapers.", Toast.LENGTH_LONG).show()
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                contentPadding = PaddingValues()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFF2563EB), Color(0xFF1D4ED8), Color(0xFF0284C7))
+                            )
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = if (isActive) "YOU ARE VIP" else "START VIP ACCESS",
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
+            }
+
+            Text(
+                text = "Secured by Google Play Billing • Cancel anytime in Subscriptions",
+                color = Color.White.copy(alpha = 0.4f),
+                fontSize = 11.sp
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

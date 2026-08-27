@@ -2,9 +2,8 @@ package com.example
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
-import com.example.ui.charging.ChargingAnimationOverlay
 import com.example.ui.theme.MyApplicationTheme
-import com.example.util.BatteryChargingState
+import com.example.ui.wallpapers.HomeScreenSimulatorOverlay
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
 import org.junit.Rule
@@ -22,20 +21,14 @@ class GreetingScreenshotTest {
   @get:Rule val composeTestRule = createComposeRule()
 
   @Test
-  fun charging_animation_screenshot() {
+  fun home_screen_simulator_screenshot() {
     composeTestRule.setContent {
       MyApplicationTheme {
-        ChargingAnimationOverlay(
-          chargingState = BatteryChargingState(
-            isCharging = true,
-            batteryPercent = 78,
-            chargingSource = "Fast AC"
-          ),
-          isEnabled = true
-        )
+        HomeScreenSimulatorOverlay()
       }
     }
 
-    composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/charging.png")
+    composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/home_simulator.png")
   }
 }
+

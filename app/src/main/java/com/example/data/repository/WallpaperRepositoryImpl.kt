@@ -33,6 +33,13 @@ class WallpaperRepositoryImpl(
                             val id = doc["id"] as? String ?: return@mapNotNull null
                             val advancedMap = doc["advanced_config"] as? Map<*, *>
                             val existing = dao.getWallpaperByIdSync(id)
+                            val rawExpType = (doc["live_experience_type"] as? String)
+                                ?: (advancedMap?.get("live_experience_type") as? String)
+                            val expType = if (rawExpType == "TRANSITION") {
+                                com.example.domain.models.LiveExperienceType.TRANSITION
+                            } else {
+                                com.example.domain.models.LiveExperienceType.NORMAL
+                            }
                             Wallpaper(
                                 id = id,
                                 title = doc["title"] as? String ?: "Untitled",
@@ -46,17 +53,23 @@ class WallpaperRepositoryImpl(
                                 isNew = doc["is_new"] as? Boolean ?: false,
                                 isFeatured = doc["is_featured"] as? Boolean ?: false,
                                 soundAvailable = doc["sound_available"] as? Boolean ?: false,
-                                advancedConfig = if (advancedMap != null) {
+                                advancedConfig = if (advancedMap != null || expType == com.example.domain.models.LiveExperienceType.TRANSITION) {
                                     AdvancedConfig(
-                                        lockAnimationEnabled = advancedMap["lockAnimationEnabled"] as? Boolean ?: false,
-                                        lockAnimationVideoUrl = advancedMap["lockAnimationVideoUrl"] as? String,
-                                        unlockTransitionEnabled = advancedMap["unlockTransitionEnabled"] as? Boolean ?: false,
-                                        unlockTransitionVideoUrl = advancedMap["unlockTransitionVideoUrl"] as? String,
-                                        chargingAnimationEnabled = advancedMap["chargingAnimationEnabled"] as? Boolean ?: false,
-                                        chargingAnimationVideoUrl = advancedMap["chargingAnimationVideoUrl"] as? String,
-                                        restartOnScreenOn = advancedMap["restartOnScreenOn"] as? Boolean ?: true,
-                                        loopMainVideo = advancedMap["loopMainVideo"] as? Boolean ?: true,
-                                        stopWhenScreenOff = advancedMap["stopWhenScreenOff"] as? Boolean ?: true
+                                        liveExperienceType = expType,
+                                        lockAnimationEnabled = advancedMap?.get("lockAnimationEnabled") as? Boolean ?: false,
+                                        lockAnimationVideoUrl = advancedMap?.get("lockAnimationVideoUrl") as? String,
+                                        lockDurationMs = (advancedMap?.get("lockDurationMs") as? Number)?.toLong() ?: 0L,
+                                        unlockTransitionEnabled = advancedMap?.get("unlockTransitionEnabled") as? Boolean ?: false,
+                                        unlockTransitionVideoUrl = advancedMap?.get("unlockTransitionVideoUrl") as? String,
+                                        transitionDurationMs = (advancedMap?.get("transitionDurationMs") as? Number)?.toLong() ?: 0L,
+                                        chargingAnimationEnabled = advancedMap?.get("chargingAnimationEnabled") as? Boolean ?: false,
+                                        chargingAnimationVideoUrl = advancedMap?.get("chargingAnimationVideoUrl") as? String,
+                                        chargingDurationMs = (advancedMap?.get("chargingDurationMs") as? Number)?.toLong() ?: 0L,
+                                        chargingReturnAnimationVideoUrl = advancedMap?.get("chargingReturnAnimationVideoUrl") as? String,
+                                        chargingReturnDurationMs = (advancedMap?.get("chargingReturnDurationMs") as? Number)?.toLong() ?: 0L,
+                                        restartOnScreenOn = advancedMap?.get("restartOnScreenOn") as? Boolean ?: true,
+                                        loopMainVideo = advancedMap?.get("loopMainVideo") as? Boolean ?: true,
+                                        stopWhenScreenOff = advancedMap?.get("stopWhenScreenOff") as? Boolean ?: true
                                     )
                                 } else null,
                                 createdAt = (doc["created_at"] as? Number)?.toLong() ?: System.currentTimeMillis(),

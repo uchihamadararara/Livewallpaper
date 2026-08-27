@@ -83,6 +83,7 @@ class WallpaperDetailViewModel(
             if (wallpaper.type == "STATIC") {
                 _applyState.value = ApplyState.ShowStaticTargetSelection(wallpaper)
             } else {
+                // Only show sound prompt if this live wallpaper supports audio
                 if (wallpaper.soundAvailable) {
                     _applyState.value = ApplyState.ShowSoundPrompt(wallpaper)
                 } else {
@@ -128,8 +129,8 @@ class WallpaperDetailViewModel(
 
     private fun prepareLiveWallpaperDownload(wallpaper: Wallpaper, soundEnabled: Boolean) {
         viewModelScope.launch {
-            _applyState.value = ApplyState.Applying("Downloading video for offline playback...")
-            userPreferencesRepository.setSoundEnabled(soundEnabled)
+            _applyState.value = ApplyState.Applying("Preparing live wallpaper assets...")
+            userPreferencesRepository.setAppliedWallpaperSoundEnabled(soundEnabled)
 
             try {
                 var videoUrl = wallpaper.videoUrl
@@ -155,22 +156,82 @@ class WallpaperDetailViewModel(
     fun executeLiveDownloadAndPrepare(
         context: Context,
         wallpaper: Wallpaper,
-        videoUrl: String,
+        primaryVideoUrl: String,
         soundEnabled: Boolean
     ) {
         viewModelScope.launch {
-            _applyState.value = ApplyState.Applying("Downloading video for offline playback...")
-            val downloadRes = LocalWallpaperStorageManager.downloadMediaToTemp(
-                context = context,
-                urlString = videoUrl,
-                tempFileName = "temp_live_${wallpaper.id}.mp4"
-            )
+            _applyState.value = ApplyState.Applying("Downloading wallpaper bundle...")
+            try {
+                val stagingDir = LocalWallpaperStorageManager.getStagingDirectory(context, wallpaper.id)
+                val primaryFile = File(stagingDir, "primary.mp4")
 
-            if (downloadRes.isSuccess) {
-                val tempFile = downloadRes.getOrNull()!!
-                _applyState.value = ApplyState.ReadyToLaunchLiveSystemIntent(wallpaper, tempFile, soundEnabled)
-            } else {
-                _applyState.value = ApplyState.Error("Download failed. Your current wallpaper was not changed.")
+                val primaryRes = LocalWallpaperStorageManager.downloadMediaToFile(primaryFile, primaryVideoUrl)
+                if (primaryRes.isFailure) {
+                    _applyState.value = ApplyState.Error("Failed to download primary video. Your current wallpaper was not changed.")
+                    return@launch
+                }
+
+                val config = wallpaper.advancedConfig
+                var lockFileName: String? = null
+                var transitionFileName: String? = null
+                var chargingFileName: String? = null
+                var chargingReturnFileName: String? = null
+
+                if (wallpaper.liveExperienceType == com.example.domain.models.LiveExperienceType.TRANSITION) {
+                    if (config?.lockAnimationEnabled == true && !config.lockAnimationVideoUrl.isNullOrEmpty()) {
+                        _applyState.value = ApplyState.Applying("Downloading lock screen asset...")
+                        val lockFile = File(stagingDir, "lock.mp4")
+                        if (LocalWallpaperStorageManager.downloadMediaToFile(lockFile, config.lockAnimationVideoUrl).isSuccess) {
+                            lockFileName = "lock.mp4"
+                        }
+                    }
+
+                    if (config?.unlockTransitionEnabled == true && !config.unlockTransitionVideoUrl.isNullOrEmpty()) {
+                        _applyState.value = ApplyState.Applying("Downloading unlock transition asset...")
+                        val transFile = File(stagingDir, "transition.mp4")
+                        if (LocalWallpaperStorageManager.downloadMediaToFile(transFile, config.unlockTransitionVideoUrl).isSuccess) {
+                            transitionFileName = "transition.mp4"
+                        }
+                    }
+                }
+
+                if (config?.chargingAnimationEnabled == true && !config.chargingAnimationVideoUrl.isNullOrEmpty()) {
+                    _applyState.value = ApplyState.Applying("Downloading charging asset...")
+                    val chargingFile = File(stagingDir, "charging.mp4")
+                    if (LocalWallpaperStorageManager.downloadMediaToFile(chargingFile, config.chargingAnimationVideoUrl).isSuccess) {
+                        chargingFileName = "charging.mp4"
+                    }
+
+                    if (!config.chargingReturnAnimationVideoUrl.isNullOrEmpty()) {
+                        val returnFile = File(stagingDir, "charging_return.mp4")
+                        if (LocalWallpaperStorageManager.downloadMediaToFile(returnFile, config.chargingReturnAnimationVideoUrl).isSuccess) {
+                            chargingReturnFileName = "charging_return.mp4"
+                        }
+                    }
+                }
+
+                val manifest = com.example.domain.models.LiveWallpaperManifest(
+                    wallpaperId = wallpaper.id,
+                    liveExperienceType = wallpaper.liveExperienceType,
+                    soundAvailable = wallpaper.soundAvailable,
+                    primaryVideoFile = "primary.mp4",
+                    lockVideoFile = lockFileName,
+                    transitionVideoFile = transitionFileName,
+                    chargingVideoFile = chargingFileName,
+                    chargingReturnVideoFile = chargingReturnFileName,
+                    lockDurationMs = config?.lockDurationMs ?: 0L,
+                    transitionDurationMs = config?.transitionDurationMs ?: 0L,
+                    chargingDurationMs = config?.chargingDurationMs ?: 0L,
+                    chargingReturnDurationMs = config?.chargingReturnDurationMs ?: 0L
+                )
+
+                _applyState.value = ApplyState.ReadyToLaunchLiveSystemIntent(
+                    wallpaper = wallpaper,
+                    manifest = manifest,
+                    soundEnabled = soundEnabled
+                )
+            } catch (e: Exception) {
+                _applyState.value = ApplyState.Error("Error downloading bundle: ${e.message}")
             }
         }
     }
@@ -182,14 +243,18 @@ class WallpaperDetailViewModel(
         }
     }
 
-    fun onLiveWallpaperPickerLaunched(context: Context, wallpaper: Wallpaper, tempFile: File, soundEnabled: Boolean) {
+    fun onLiveWallpaperPickerLaunched(
+        context: Context,
+        wallpaper: Wallpaper,
+        manifest: com.example.domain.models.LiveWallpaperManifest,
+        soundEnabled: Boolean
+    ) {
         viewModelScope.launch {
-            LocalWallpaperStorageManager.commitAppliedLiveWallpaper(
+            LocalWallpaperStorageManager.promoteStagingToActive(
                 context = context,
                 wallpaperId = wallpaper.id,
-                tempDownloadedFile = tempFile,
-                soundAvailable = wallpaper.soundAvailable && soundEnabled,
-                chargingAnimationAvailable = wallpaper.hasChargingAnimation
+                manifest = manifest,
+                soundEnabled = soundEnabled
             )
             _applyState.value = ApplyState.Success("Live wallpaper applied! Choose Home or Home & Lock Screen in system preview.")
         }
@@ -259,7 +324,11 @@ sealed class ApplyState {
     data class ShowSoundPrompt(val wallpaper: Wallpaper) : ApplyState()
     data class ReadyToApplyStatic(val wallpaper: Wallpaper, val tempFile: File, val targetFlags: Int) : ApplyState()
     data class ReadyToDownloadLive(val wallpaper: Wallpaper, val videoUrl: String, val soundEnabled: Boolean) : ApplyState()
-    data class ReadyToLaunchLiveSystemIntent(val wallpaper: Wallpaper, val tempFile: File, val soundEnabled: Boolean) : ApplyState()
+    data class ReadyToLaunchLiveSystemIntent(
+        val wallpaper: Wallpaper,
+        val manifest: com.example.domain.models.LiveWallpaperManifest,
+        val soundEnabled: Boolean
+    ) : ApplyState()
     data class Success(val message: String) : ApplyState()
     data class Error(val message: String) : ApplyState()
 }

@@ -1,13 +1,18 @@
 package com.example.domain.state
 
 import com.example.domain.models.AdvancedConfig
+import com.example.domain.models.LiveExperienceType
 
 sealed class ScreenState {
     object ScreenOff : ScreenState()
     object LockScreen : ScreenState()
     object Transitioning : ScreenState()
     object HomeScreen : ScreenState()
-    object Charging : ScreenState()
+    object HomeToCharging : ScreenState()
+    object LockToCharging : ScreenState()
+    object ChargingLoop : ScreenState()
+    object ChargingReturnToHome : ScreenState()
+    object ChargingReturnToLock : ScreenState()
 }
 
 sealed class WallpaperAction {
@@ -16,7 +21,10 @@ sealed class WallpaperAction {
     data class PlayLockScreen(val startFromBeginning: Boolean) : WallpaperAction()
     object PlayTransition : WallpaperAction()
     object PlayHome : WallpaperAction()
-    object PlayCharging : WallpaperAction()
+    object PlayChargingEntry : WallpaperAction()
+    object PlayChargingLoop : WallpaperAction()
+    object PlayChargingReturnToHome : WallpaperAction()
+    object PlayChargingReturnToLock : WallpaperAction()
 }
 
 sealed class InputEvent {
@@ -26,6 +34,8 @@ sealed class InputEvent {
     object PowerConnected : InputEvent()
     object PowerDisconnected : InputEvent()
     object TransitionFinished : InputEvent()
+    object ChargingEntryFinished : InputEvent()
+    object ChargingReturnFinished : InputEvent()
 }
 
 /**
@@ -44,6 +54,13 @@ class WallpaperStateMachine(
     var isCharging: Boolean = false
         private set
 
+    var isKeyguardLocked: Boolean = false
+        private set
+
+    fun setKeyguardLocked(locked: Boolean) {
+        isKeyguardLocked = locked
+    }
+
     fun processEvent(event: InputEvent): List<WallpaperAction> {
         val actions = mutableListOf<WallpaperAction>()
 
@@ -59,30 +76,29 @@ class WallpaperStateMachine(
 
             is InputEvent.ScreenOn -> {
                 isScreenOn = true
-                
                 if (isCharging && config.chargingAnimationEnabled) {
-                    currentState = ScreenState.Charging
-                    actions.add(WallpaperAction.PlayCharging)
-                } else if (currentState == ScreenState.ScreenOff || currentState == ScreenState.LockScreen) {
-                    // Always restart Lock Screen animation from the beginning when screen turns on
+                    currentState = ScreenState.ChargingLoop
+                    actions.add(WallpaperAction.PlayChargingLoop)
+                } else if (isKeyguardLocked) {
                     currentState = ScreenState.LockScreen
-                    if (config.lockAnimationEnabled) {
-                        actions.add(WallpaperAction.PlayLockScreen(startFromBeginning = true))
+                    if (config.liveExperienceType == LiveExperienceType.TRANSITION && config.lockAnimationEnabled) {
+                        actions.add(WallpaperAction.PlayLockScreen(startFromBeginning = config.restartOnScreenOn))
                     } else {
-                        actions.add(WallpaperAction.PlayHome) // Fallback if no lock animation
+                        actions.add(WallpaperAction.PlayHome)
                     }
                 } else {
-                    // E.g. screen turned on but we were already on HomeScreen state (maybe device doesn't use lock screen)
+                    currentState = ScreenState.HomeScreen
                     actions.add(WallpaperAction.PlayHome)
                 }
             }
 
             is InputEvent.UserUnlocked -> {
+                isKeyguardLocked = false
                 if (isScreenOn) {
                     if (isCharging && config.chargingAnimationEnabled) {
-                        // Keep charging animation playing
-                        currentState = ScreenState.Charging
-                    } else if (config.unlockTransitionEnabled) {
+                        // User unlocked while plugged in: transition charging return to home or stay in charging
+                        // Charging loop continues until disconnected
+                    } else if (config.liveExperienceType == LiveExperienceType.TRANSITION && config.unlockTransitionEnabled) {
                         currentState = ScreenState.Transitioning
                         actions.add(WallpaperAction.PlayTransition)
                     } else {
@@ -90,7 +106,6 @@ class WallpaperStateMachine(
                         actions.add(WallpaperAction.PlayHome)
                     }
                 } else {
-                    // Unlocked while screen is off (e.g. fast fingerprint). When screen turns on, go straight to Home.
                     currentState = ScreenState.HomeScreen
                 }
             }
@@ -105,17 +120,59 @@ class WallpaperStateMachine(
             is InputEvent.PowerConnected -> {
                 isCharging = true
                 if (isScreenOn && config.chargingAnimationEnabled) {
-                    currentState = ScreenState.Charging
-                    actions.add(WallpaperAction.PlayCharging)
+                    if (currentState == ScreenState.LockScreen || isKeyguardLocked) {
+                        currentState = ScreenState.LockToCharging
+                        actions.add(WallpaperAction.PlayChargingEntry)
+                    } else {
+                        currentState = ScreenState.HomeToCharging
+                        actions.add(WallpaperAction.PlayChargingEntry)
+                    }
+                }
+            }
+
+            is InputEvent.ChargingEntryFinished -> {
+                if (currentState == ScreenState.HomeToCharging || currentState == ScreenState.LockToCharging) {
+                    currentState = ScreenState.ChargingLoop
+                    actions.add(WallpaperAction.PlayChargingLoop)
                 }
             }
 
             is InputEvent.PowerDisconnected -> {
                 isCharging = false
                 if (isScreenOn) {
-                    // Return to previous logical state (we can't know for sure if locked or home without querying, 
-                    // but we assume home if we were charging, unless we have a strict lock state tracking).
-                    // For simplicity, fallback to home. Android's visibility callbacks will correct this if needed.
+                    if (!config.chargingReturnAnimationVideoUrl.isNullOrEmpty()) {
+                        if (isKeyguardLocked) {
+                            currentState = ScreenState.ChargingReturnToLock
+                            actions.add(WallpaperAction.PlayChargingReturnToLock)
+                        } else {
+                            currentState = ScreenState.ChargingReturnToHome
+                            actions.add(WallpaperAction.PlayChargingReturnToHome)
+                        }
+                    } else {
+                        if (isKeyguardLocked) {
+                            currentState = ScreenState.LockScreen
+                            if (config.liveExperienceType == LiveExperienceType.TRANSITION && config.lockAnimationEnabled) {
+                                actions.add(WallpaperAction.PlayLockScreen(startFromBeginning = false))
+                            } else {
+                                actions.add(WallpaperAction.PlayHome)
+                            }
+                        } else {
+                            currentState = ScreenState.HomeScreen
+                            actions.add(WallpaperAction.PlayHome)
+                        }
+                    }
+                }
+            }
+
+            is InputEvent.ChargingReturnFinished -> {
+                if (currentState == ScreenState.ChargingReturnToLock) {
+                    currentState = ScreenState.LockScreen
+                    if (config.liveExperienceType == LiveExperienceType.TRANSITION && config.lockAnimationEnabled) {
+                        actions.add(WallpaperAction.PlayLockScreen(startFromBeginning = false))
+                    } else {
+                        actions.add(WallpaperAction.PlayHome)
+                    }
+                } else if (currentState == ScreenState.ChargingReturnToHome) {
                     currentState = ScreenState.HomeScreen
                     actions.add(WallpaperAction.PlayHome)
                 }
@@ -125,3 +182,4 @@ class WallpaperStateMachine(
         return actions
     }
 }
+

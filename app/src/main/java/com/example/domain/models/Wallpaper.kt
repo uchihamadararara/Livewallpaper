@@ -22,6 +22,9 @@ data class Wallpaper(
     val categoryIds: List<String> = emptyList(),
     val isFavorite: Boolean = false
 ) {
+    val liveExperienceType: LiveExperienceType
+        get() = advancedConfig?.liveExperienceType ?: LiveExperienceType.NORMAL
+
     val hasChargingAnimation: Boolean
         get() = advancedConfig?.chargingAnimationEnabled == true || !advancedConfig?.chargingAnimationVideoUrl.isNullOrEmpty()
 
