@@ -34,7 +34,7 @@ fun AppLogoIcon(
         contentAlignment = Alignment.Center
     ) {
         Image(
-            painter = painterResource(id = R.drawable.ic_app_logo),
+            painter = painterResource(id = R.drawable.img_app_logo),
             contentDescription = "Live Wallpaper Logo",
             modifier = Modifier
                 .size(size)
