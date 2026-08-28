@@ -1,51 +1,48 @@
 package com.example.data.repository
 
-import com.example.data.network.SupabaseApiService
 import com.example.domain.repository.AuthRepository
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 class AuthRepositoryImpl(
-    private val supabaseApi: SupabaseApiService
+    private val firebaseAuth: FirebaseAuth
 ) : AuthRepository {
-    private val _isLoggedIn = MutableStateFlow(false)
-    override val isLoggedIn: StateFlow<Boolean> = _isLoggedIn
-    
-    private var currentToken: String? = null
-    private var currentUserId: String? = null
 
-    suspend fun getAccessToken(): String? = currentToken
-    suspend fun getUserId(): String? = currentUserId
+    private val _isLoggedIn = MutableStateFlow(firebaseAuth.currentUser != null)
+    override val isLoggedIn: StateFlow<Boolean> = _isLoggedIn
+
+    init {
+        // Keeps isLoggedIn in sync automatically, no manual token bookkeeping needed
+        firebaseAuth.addAuthStateListener { auth ->
+            _isLoggedIn.value = auth.currentUser != null
+        }
+    }
+
+    // Firestore attaches the ID token automatically, so repos generally just
+    // need the uid. getIdToken() is only for the one plain-HTTP call left
+    // (verify-purchase on the Cloudflare Worker), which needs the raw token
+    // in an Authorization header since it isn't a Firebase SDK call.
+    fun getUserId(): String? = firebaseAuth.currentUser?.uid
+
+    suspend fun getIdToken(): String? = firebaseAuth.currentUser?.getIdToken(false)?.await()?.token
 
     override suspend fun signInAnonymously(): Result<Unit> {
         return withContext(Dispatchers.IO) {
             try {
-                val request = emptyMap<String, String>()
-                val response = supabaseApi.signUpAnonymously(
-                    com.example.di.AppContainer.SUPABASE_ANON_KEY,
-                    request
-                )
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    currentToken = body?.get("access_token") as? String
-                    val user = body?.get("user") as? Map<*, *>
-                    currentUserId = user?.get("id") as? String
-                    _isLoggedIn.value = true
-                    Result.success(Unit)
-                } else {
-                    Result.failure(Exception("Auth failed: ${response.code()}"))
-                }
+                if (firebaseAuth.currentUser != null) return@withContext Result.success(Unit)
+                firebaseAuth.signInAnonymously().await()
+                Result.success(Unit)
             } catch (e: Exception) {
                 Result.failure(e)
             }
         }
     }
-    
+
     override suspend fun signOut() {
-        currentToken = null
-        currentUserId = null
-        _isLoggedIn.value = false
+        firebaseAuth.signOut()
     }
 }

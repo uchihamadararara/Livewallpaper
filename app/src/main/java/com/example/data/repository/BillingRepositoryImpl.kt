@@ -5,7 +5,7 @@ import android.content.Context
 import android.util.Log
 import com.android.billingclient.api.*
 import com.example.data.billing.BillingManager
-import com.example.data.network.SupabaseApiService
+import com.example.data.network.BackendApiService
 import com.example.domain.repository.BillingRepository
 import com.example.domain.repository.UserRepository
 import kotlinx.coroutines.*
@@ -15,7 +15,7 @@ class BillingRepositoryImpl(
     private val context: Context,
     private val userRepository: UserRepository,
     private val authRepository: AuthRepositoryImpl,
-    private val supabaseApi: SupabaseApiService
+    private val backendApi: BackendApiService
 ) : BillingRepository {
 
     private val billingScope = CoroutineScope(Job() + Dispatchers.IO)
@@ -55,18 +55,26 @@ class BillingRepositoryImpl(
         }
     }
 
+    // The Firebase ID token is sent in the Authorization header so the
+    // Cloudflare Worker can verify who's calling (using Firebase's public
+    // keys) before it trusts the purchase token and writes to Firestore
+    // with its own service-account credentials.
     private suspend fun verifyPurchaseWithBackend(purchase: Purchase) {
         val uid = authRepository.getUserId() ?: return
         try {
-            val token = authRepository.getAccessToken() ?: return
-            val request = mapOf("purchaseToken" to purchase.purchaseToken, "productId" to purchase.products.firstOrNull())
-            val response = supabaseApi.verifyPurchase("Bearer $token", request)
+            val idToken = authRepository.getIdToken() ?: return
+            val request = mapOf(
+                "purchaseToken" to purchase.purchaseToken,
+                "productId" to purchase.products.firstOrNull()
+            )
+            val response = backendApi.verifyPurchase("Bearer $idToken", request)
             if (response.isSuccessful) {
                 userRepository.refreshUserProfile(uid)
+            } else {
+                Log.e("Billing", "Verify failed: ${response.code()} ${response.errorBody()?.string()}")
             }
         } catch (e: Exception) {
             Log.e("Billing", "Failed to verify purchase", e)
         }
     }
 }
-

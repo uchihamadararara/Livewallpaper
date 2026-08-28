@@ -6,6 +6,7 @@ plugins {
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.google.services)
 }
 
 android {
@@ -103,6 +104,10 @@ dependencies {
   // Sign-In via Credential Manager:
   implementation(libs.androidx.credentials)
   implementation(libs.androidx.credentials.play.services)
+  implementation(platform(libs.firebase.bom))
+  implementation(libs.firebase.auth)
+  implementation(libs.firebase.firestore)
+  implementation(libs.firebase.storage)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
   implementation(libs.logging.interceptor)
