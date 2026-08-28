@@ -7,67 +7,57 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isUser(uid) {
       return isAuthenticated() && request.auth.uid == uid;
     }
 
-    function isAdmin() {
-      // In a real app, this would check a secure custom claim set by the backend
-      // return request.auth.token.admin == true;
-      return false; // Users can never be admin from client requests
-    }
-
     // Wallpapers Collection (Public Read-Only)
     match /wallpapers/{wallpaperId} {
-      // Anyone can read published wallpapers
       allow read: if resource.data.isActive == true;
-      // Only admin can write
-      allow write: if isAdmin();
+      allow write: if false; // Admin panel writes via Admin SDK / secure worker
     }
 
     // Categories Collection (Public Read-Only)
     match /categories/{categoryId} {
       allow read: if resource.data.isActive == true;
-      allow write: if isAdmin();
+      allow write: if false;
     }
 
     // Users Collection
-    match /users/{uid} {
-      // User can read their own profile
-      allow read: if isUser(uid);
-      
-      // User can ONLY update non-sensitive fields.
-      // Strict rejection of attempts to modify subscription or entitlement data.
-      allow update: if isUser(uid) 
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-                      'subscriptionStatus', 
-                      'subscriptionExpiry', 
-                      'subscriptionId',
-                      'retainedPremiumWallpaper',
-                      'currentAppliedWallpaperId',
-                      'purchaseToken',
-                      'role'
-                    ]);
-      
-      allow create: if isUser(uid)
+    match /users/{userId} {
+      allow read: if isUser(userId);
+
+      allow create: if isUser(userId)
                     && request.resource.data.subscriptionStatus == 'NONE'
+                    && !('currentAppliedWallpaperId' in request.resource.data)
                     && !('retainedPremiumWallpaper' in request.resource.data)
                     && request.resource.data.role == 'USER';
-      
-      allow delete: if false; // Deletion should be handled by a Cloud Function for cleanup
-      
+
+      allow update: if isUser(userId)
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                       .hasAny(['subscriptionStatus', 'subscriptionExpiry', 'retainedPremiumWallpaper', 'subscriptionId', 'purchaseToken', 'role'])
+                    && (
+                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['currentAppliedWallpaperId'])
+                      || (
+                        exists(/databases/$(database)/documents/wallpapers/$(request.resource.data.currentAppliedWallpaperId))
+                        && get(/databases/$(database)/documents/wallpapers/$(request.resource.data.currentAppliedWallpaperId)).data.isPremium == false
+                      )
+                      || resource.data.subscriptionStatus == 'ACTIVE'
+                    );
+
+      allow delete: if false;
+
       // User Favorites Subcollection
       match /favorites/{wallpaperId} {
-        allow read, write: if isUser(uid);
+        allow read, write: if isUser(userId);
       }
     }
-    
-    // Subscriptions (Backend Only)
-    // Only the backend (Cloud Functions) handles subscription receipts and validation.
+
+    // Subscriptions & Purchases audit
     match /purchases/{purchaseId} {
-      allow read: if isUser(resource.data.uid);
-      allow write: if false; // Client sends receipt via Cloud Function, NOT direct Firestore write
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow write: if false;
     }
   }
 }

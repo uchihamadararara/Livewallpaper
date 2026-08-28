@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "786399290891",
+    "project_id": "live-wallpaper-royal",
+    "storage_bucket": "live-wallpaper-royal.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:786399290891:android:6427eb1752e5eb9b04c90e",
+        "android_client_info": {
+          "package_name": "com.live.wallpaper.royal"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCzMOyUOHMBuOuXCs7mUM6OTKPIRdm1cdU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
