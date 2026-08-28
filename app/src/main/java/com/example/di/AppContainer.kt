@@ -20,7 +20,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 object AppContainer {
 
     // Set CLOUDFLARE_WORKER_URL in your .env, e.g. https://your-worker.your-subdomain.workers.dev/
-    val CLOUDFLARE_WORKER_URL: String = BuildConfig.CLOUDFLARE_WORKER_URL
+    val CLOUDFLARE_WORKER_URL: String = BuildConfig.CLOUDFLARE_WORKER_URL.ifBlank { "https://example.workers.dev" }
 
     val firebaseAuth by lazy { Firebase.auth }
     val firestore by lazy { Firebase.firestore }
@@ -30,8 +30,10 @@ object AppContainer {
         .build()
 
     val backendApi: BackendApiService by lazy {
+        val validUrl = if (CLOUDFLARE_WORKER_URL.startsWith("http")) CLOUDFLARE_WORKER_URL else "https://example.workers.dev"
+        val formattedUrl = if (validUrl.endsWith("/")) validUrl else "$validUrl/"
         Retrofit.Builder()
-            .baseUrl(if (CLOUDFLARE_WORKER_URL.endsWith("/")) CLOUDFLARE_WORKER_URL else "$CLOUDFLARE_WORKER_URL/")
+            .baseUrl(formattedUrl)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(BackendApiService::class.java)
